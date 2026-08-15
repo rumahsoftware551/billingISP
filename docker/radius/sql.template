@@ -1,0 +1,45 @@
+sql {
+    dialect = "postgresql"
+    driver = "rlm_sql_postgresql"
+
+    postgresql {
+        send_application_name = yes
+    }
+
+    server = "__DB_HOST__"
+    port = __DB_PORT__
+    login = "__DB_USER__"
+    password = "__DB_PASSWORD__"
+    radius_db = "__DB_NAME__"
+
+    acct_table1 = "radacct"
+    acct_table2 = "radacct"
+    postauth_table = "radpostauth"
+    authcheck_table = "radcheck"
+    groupcheck_table = "radgroupcheck"
+    authreply_table = "radreply"
+    groupreply_table = "radgroupreply"
+    usergroup_table = "radusergroup"
+
+    # Required by the stock FreeRADIUS 3.2.10 PostgreSQL queries.conf.
+    # The queries expand %{${group_attribute}} when evaluating radgroupcheck/radgroupreply.
+    group_attribute = "SQL-Group"
+
+    read_groups = yes
+    read_clients = yes
+    client_table = "nas"
+    delete_stale_sessions = yes
+
+    pool {
+        start = 1
+        min = 1
+        max = 8
+        spare = 1
+        uses = 0
+        lifetime = 0
+        idle_timeout = 60
+        retry_delay = 5
+    }
+
+    $INCLUDE ${modconfdir}/${.:name}/main/${dialect}/queries.conf
+}
