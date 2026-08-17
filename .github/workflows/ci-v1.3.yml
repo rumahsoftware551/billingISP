@@ -88,6 +88,17 @@ jobs:
           php --version
           composer --version
 
+      - name: Prepare Laravel writable directories
+        run: |
+          mkdir -p bootstrap/cache
+          mkdir -p storage/framework/cache/data
+          mkdir -p storage/framework/sessions
+          mkdir -p storage/framework/views
+          mkdir -p storage/logs
+
+          chmod -R 775 bootstrap/cache
+          chmod -R 775 storage
+
       - name: Validate Composer files
         run: composer validate --strict --no-check-publish
 
