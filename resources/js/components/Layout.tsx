@@ -11,6 +11,7 @@ export default function Layout({children}:{children:React.ReactNode}) {
   const {can,systemAdmin,platformAdmin}=useAccess();
   const [mobile,setMobile]=useState(false);
   const [search,setSearch]=useState('');
+  const [profileOpen,setProfileOpen]=useState(false);
   const branding=props.branding||{};
 
   const groups:NavGroup[]=[
@@ -88,15 +89,15 @@ export default function Layout({children}:{children:React.ReactNode}) {
 
         <div className="flex items-center gap-2">
           <Link href="/access" className="hidden rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 sm:inline-flex">Akses Portal</Link>
-          <div className="group relative">
-            <button className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-1.5 pr-3 text-sm shadow-sm hover:bg-slate-50">
+          <div className="relative">
+            <button aria-expanded={profileOpen} onClick={()=>setProfileOpen(v=>!v)} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-1.5 pr-3 text-sm shadow-sm hover:bg-slate-50">
               <span className="grid h-8 w-8 place-items-center rounded-lg bg-slate-900 text-[11px] font-black text-white">{initials}</span>
               <span className="hidden max-w-36 truncate font-semibold sm:block">{props.auth?.user?.name||props.auth?.user?.email}</span><ChevronDown size={14} className="text-slate-400"/>
             </button>
-            <div className="invisible absolute right-0 z-40 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 opacity-0 shadow-2xl transition group-hover:visible group-hover:opacity-100">
+            <div className={`${profileOpen?'visible opacity-100':'invisible opacity-0'} absolute right-0 z-40 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl transition`}>
               <div className="px-3 py-2"><div className="text-xs font-semibold text-slate-800">{props.auth?.user?.name}</div><div className="mt-0.5 truncate text-[11px] text-slate-500">{props.auth?.user?.email}</div></div>
               <div className="my-1 border-t border-slate-100"/>
-              <Link method="post" as="button" href="/logout" className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-rose-600 hover:bg-rose-50">Keluar</Link>
+              <Link method="post" as="button" href="/logout" onClick={()=>setProfileOpen(false)} className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-rose-600 hover:bg-rose-50">Keluar</Link>
             </div>
           </div>
         </div>
