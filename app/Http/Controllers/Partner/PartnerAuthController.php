@@ -48,7 +48,7 @@ class PartnerAuthController extends Controller
     {
         $accountId=(int)$request->session()->get('partner_account_id',0);$tenantId=(string)$request->session()->get('partner_tenant_id','');
         $this->event($tenantId,null,$accountId?:null,'logout',$request);
-        $request->session()->invalidate();$request->session()->regenerateToken();
+        $request->session()->forget(['partner_account_id','partner_tenant_id']);$request->session()->regenerateToken();
         return redirect()->route('partner.login',['tenantSlug'=>$tenantSlug]);
     }
     private function event(string $tenantId,?int $partnerId,?int $accountId,string $event,Request $request,array $meta=[]):void

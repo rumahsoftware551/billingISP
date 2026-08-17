@@ -31,6 +31,6 @@ class InventoryAuthController extends Controller {
         $a->update(['password'=>$d['password'],'must_change_password'=>false]);
         return back()->with('success','Password inventory berhasil diperbarui.');
     }
-    public function destroy(Request $r,string $tenantSlug):RedirectResponse { $id=(int)$r->session()->get('inventory_account_id',0); $tenantId=(string)$r->session()->get('inventory_tenant_id',''); $this->event($tenantId,$id?:null,'logout',$r); $r->session()->invalidate(); $r->session()->regenerateToken(); return redirect()->route('inventory.login',['tenantSlug'=>$tenantSlug]); }
+    public function destroy(Request $r,string $tenantSlug):RedirectResponse { $id=(int)$r->session()->get('inventory_account_id',0); $tenantId=(string)$r->session()->get('inventory_tenant_id',''); $this->event($tenantId,$id?:null,'logout',$r); $r->session()->forget(['inventory_account_id','inventory_tenant_id']); $r->session()->regenerateToken(); return redirect()->route('inventory.login',['tenantSlug'=>$tenantSlug]); }
     private function event(string $tenantId,?int $accountId,string $event,Request $r,array $meta=[]):void { if($tenantId==='')return; InventoryLoginEvent::query()->create(['tenant_id'=>$tenantId,'inventory_portal_account_id'=>$accountId,'event'=>$event,'ip_address'=>$r->ip(),'user_agent'=>Str::limit((string)$r->userAgent(),500,''),'meta'=>$meta?:null,'created_at'=>now()]); }
 }
