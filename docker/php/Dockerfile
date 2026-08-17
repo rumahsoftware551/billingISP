@@ -1,14 +1,23 @@
-FROM node:22-bookworm-slim AS frontend
+﻿FROM node:22-bookworm-slim AS frontend
+
 WORKDIR /app
-COPY package.json ./
-RUN npm install --no-audit --no-fund
+
+COPY package.json package-lock.json ./
+
+RUN npm ci --no-audit --no-fund
+
 COPY resources ./resources
 COPY vite.config.ts tsconfig.json ./
+
 RUN npm run build
 
+
 FROM composer:2 AS vendor
+
 WORKDIR /app
-COPY composer.json ./
+
+COPY composer.json composer.lock ./
+
 RUN composer install \
     --no-dev \
     --prefer-dist \
@@ -16,6 +25,7 @@ RUN composer install \
     --no-progress \
     --optimize-autoloader \
     --no-scripts
+
 
 FROM php:8.5-fpm-bookworm
 
@@ -40,12 +50,16 @@ RUN apt-get update \
 WORKDIR /var/www/html
 
 COPY . .
+
 COPY --from=vendor /app/vendor ./vendor
 COPY --from=frontend /app/public/build ./public/build
+
 COPY docker/php/entrypoint.sh /usr/local/bin/jaringanku-entrypoint
 COPY docker/php/cli.sh /usr/local/bin/jaringanku-cli
 
-RUN chmod +x /usr/local/bin/jaringanku-entrypoint /usr/local/bin/jaringanku-cli \
+RUN chmod +x \
+        /usr/local/bin/jaringanku-entrypoint \
+        /usr/local/bin/jaringanku-cli \
     && mkdir -p \
         storage/framework/cache/data \
         storage/framework/sessions \
@@ -55,4 +69,5 @@ RUN chmod +x /usr/local/bin/jaringanku-entrypoint /usr/local/bin/jaringanku-cli 
     && chown -R www-data:www-data storage bootstrap/cache
 
 ENTRYPOINT ["jaringanku-entrypoint"]
+
 CMD ["php-fpm"]
