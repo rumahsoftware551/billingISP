@@ -165,6 +165,53 @@ Artisan::command('jaringanku:billing-run {period? : Billing period in YYYY-MM} {
     return 0;
 })->purpose('Generate monthly invoices idempotently for one or all tenants.');
 
+Artisan::command('jaringanku:billing-due-run {date? : As-of date in YYYY-MM-DD} {--tenant= : Optional tenant slug}', function () {
+    $dateArg = $this->argument('date') ?: now()->format('Y-m-d');
+
+    try {
+        $asOf = \Carbon\CarbonImmutable::createFromFormat('!Y-m-d', $dateArg)->startOfDay();
+    } catch (\Throwable) {
+        $this->error('Format tanggal harus YYYY-MM-DD.');
+        return 1;
+    }
+
+    if ($asOf->format('Y-m-d') !== $dateArg) {
+        $this->error('Format tanggal harus YYYY-MM-DD.');
+        return 1;
+    }
+
+    $query = \App\Models\Tenant::query();
+    if ($slug = $this->option('tenant')) {
+        $query->where('slug', $slug);
+    }
+
+    $tenants = $query->get();
+    if ($tenants->isEmpty()) {
+        $this->error('Tenant tidak ditemukan.');
+        return 2;
+    }
+
+    $exit = 0;
+    foreach ($tenants as $tenant) {
+        $run = app(\App\Services\BillingEngine::class)->runDueForTenant($tenant, $asOf, null);
+        $this->info(sprintf(
+            '%s %s: eligible=%d created=%d existing=%d errors=%d',
+            $tenant->slug,
+            $asOf->format('Y-m-d'),
+            $run->eligible_count,
+            $run->created_count,
+            $run->skipped_count,
+            $run->error_count
+        ));
+
+        if ($run->error_count > 0) {
+            $exit = 3;
+        }
+    }
+
+    return $exit;
+})->purpose('Generate recurring invoices only for active services whose billing day is due, with catch-up after scheduler downtime.');
+
 Artisan::command('jaringanku:billing-refresh', function () {
     $total = 0;
     foreach (\App\Models\Tenant::query()->get() as $tenant) {
@@ -811,6 +858,7 @@ Artisan::command('jaringanku:phase10-smoke', function () {
 })->purpose('Validate customer portal account, tenant scoping, PDF, routes, and PWA assets.');
 
 \Illuminate\Support\Facades\Schedule::command('jaringanku:billing-refresh')->dailyAt('00:10')->withoutOverlapping();
+\Illuminate\Support\Facades\Schedule::command('jaringanku:billing-due-run')->dailyAt('00:20')->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('jaringanku:automation-run')->everyTenMinutes()->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('jaringanku:payment-expire')->everyFiveMinutes()->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('jaringanku:payment-reminders')->dailyAt('09:00')->withoutOverlapping();

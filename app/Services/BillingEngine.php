@@ -87,6 +87,80 @@ class BillingEngine
         return $invoice;
     }
 
+    public function runDueForTenant(Tenant $tenant, CarbonImmutable $asOf, ?int $actorUserId = null): BillingRun
+    {
+        app()->instance(CurrentTenant::class, new CurrentTenant($tenant));
+
+        $asOf = $asOf->startOfDay();
+        $periodStart = $asOf->startOfMonth();
+        $periodEnd = $periodStart->endOfMonth();
+        $effectiveBillingDay = min(28, $asOf->day);
+        $runKey = 'scheduled:'.$asOf->format('Y-m-d');
+
+        $run = BillingRun::query()->firstOrCreate(
+            ['run_key' => $runKey],
+            ['period_start' => $periodStart, 'period_end' => $periodEnd]
+        );
+
+        $run->forceFill([
+            'status' => 'running',
+            'eligible_count' => 0,
+            'created_count' => 0,
+            'skipped_count' => 0,
+            'error_count' => 0,
+            'errors' => null,
+            'initiated_by' => $actorUserId,
+            'started_at' => now(),
+            'finished_at' => null,
+        ])->save();
+
+        $errors = [];
+        $eligible = 0;
+        $created = 0;
+        $skipped = 0;
+
+        CustomerService::query()
+            ->with(['plan', 'customer'])
+            ->where('status', 'active')
+            ->where('billing_day', '<=', $effectiveBillingDay)
+            ->where(function ($query) use ($asOf) {
+                $query->whereNull('installed_at')->orWhere('installed_at', '<=', $asOf->endOfDay());
+            })
+            ->orderBy('id')
+            ->chunkById(100, function ($services) use ($periodStart, &$eligible, &$created, &$skipped, &$errors) {
+                foreach ($services as $service) {
+                    $eligible++;
+                    $billingKey = 'service:'.$service->id.':'.$periodStart->format('Y-m');
+                    $already = Invoice::query()->where('billing_key', $billingKey)->exists();
+
+                    try {
+                        $this->generateForService($service, $periodStart);
+                        $already ? $skipped++ : $created++;
+                    } catch (Throwable $e) {
+                        $errors[] = [
+                            'service_id' => $service->id,
+                            'service_number' => $service->service_number,
+                            'message' => $e->getMessage(),
+                        ];
+                    }
+                }
+            });
+
+        $run->forceFill([
+            'status' => empty($errors) ? 'completed' : 'completed_with_errors',
+            'eligible_count' => $eligible,
+            'created_count' => $created,
+            'skipped_count' => $skipped,
+            'error_count' => count($errors),
+            'errors' => empty($errors) ? null : $errors,
+            'finished_at' => now(),
+        ])->save();
+
+        $this->refreshStatuses($tenant);
+
+        return $run->fresh();
+    }
+
     public function runForTenant(Tenant $tenant, CarbonImmutable $periodStart, ?int $actorUserId = null): BillingRun
     {
         app()->instance(CurrentTenant::class, new CurrentTenant($tenant));
