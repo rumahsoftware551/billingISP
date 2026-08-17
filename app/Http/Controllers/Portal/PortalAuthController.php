@@ -1,101 +1,268 @@
 <?php
 
-namespace App\Http\Controllers\Portal;
+namespace Tests\Feature;
 
-use App\Http\Controllers\Controller;
-use App\Models\CustomerPortalAccount;
-use App\Models\CustomerPortalLoginEvent;
+use App\Models\Customer;
+use App\Models\CustomerService;
+use App\Models\InternetPlan;
+use App\Models\Invoice;
+use App\Models\Payment;
+use App\Models\PaymentAllocation;
 use App\Models\Tenant;
+use App\Services\BillingEngine;
+use App\Services\PaymentService;
 use App\Support\CurrentTenant;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\RateLimiter;
+use Carbon\CarbonImmutable;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Inertia\Inertia;
-use Inertia\Response;
+use Tests\TestCase;
 
-class PortalAuthController extends Controller
+class BillingPaymentIntegrityTest extends TestCase
 {
-    public function create(string $tenantSlug): Response
+    use RefreshDatabase;
+
+    protected function tearDown(): void
     {
-        $tenant = Tenant::query()->where('slug', $tenantSlug)->where('status', 'active')->firstOrFail();
-        app()->instance(CurrentTenant::class, new CurrentTenant($tenant));
-        return Inertia::render('Portal/Auth/Login', [
-            'portalTenant' => $tenant->only('id', 'name', 'slug'),
+        app()->forgetInstance(CurrentTenant::class);
+
+        parent::tearDown();
+    }
+
+    public function test_billing_generation_is_idempotent_for_same_service_period(): void
+    {
+        $tenant = $this->createTenant('billing');
+        $this->bindTenant($tenant);
+
+        $customer = $this->createCustomer('BILL');
+
+        $plan = InternetPlan::query()->create([
+            'name' => 'Internet 50 Mbps',
+            'code' => '50M-'.Str::upper(Str::random(4)),
+            'price' => 250000,
+            'download_kbps' => 50000,
+            'upload_kbps' => 25000,
+            'active' => true,
+        ]);
+
+        $service = CustomerService::query()->create([
+            'customer_id' => $customer->id,
+            'internet_plan_id' => $plan->id,
+            'service_number' => 'SRV-'.Str::upper(Str::random(8)),
+            'service_type' => 'pppoe',
+            'pppoe_username' => 'test-'.Str::lower(Str::random(8)),
+            'pppoe_password' => 'Test@12345',
+            'status' => 'active',
+            'billing_day' => 1,
+            'due_day' => 10,
+            'installed_at' => now()->subMonth(),
+        ]);
+
+        $period = CarbonImmutable::parse('2026-08-01');
+
+        $first = app(BillingEngine::class)
+            ->generateForService($service, $period);
+
+        $second = app(BillingEngine::class)
+            ->generateForService($service, $period);
+
+        $this->assertSame($first->id, $second->id);
+
+        $this->assertSame(
+            1,
+            Invoice::query()
+                ->where('customer_service_id', $service->id)
+                ->where('period_start', '2026-08-01')
+                ->count()
+        );
+
+        $invoice = $first->fresh(['items']);
+
+        $this->assertSame(250000, (int) $invoice->total);
+        $this->assertSame(250000, (int) $invoice->balance_due);
+        $this->assertSame(0, (int) $invoice->paid_amount);
+        $this->assertSame('unpaid', $invoice->status);
+
+        $this->assertCount(1, $invoice->items);
+
+        $this->assertSame(
+            'service:'.$service->id.':2026-08',
+            $invoice->billing_key
+        );
+    }
+
+    public function test_partial_payment_updates_invoice_correctly(): void
+    {
+        $tenant = $this->createTenant('partial');
+        $this->bindTenant($tenant);
+
+        $customer = $this->createCustomer('PART');
+
+        $invoice = $this->createInvoice(
+            customer: $customer,
+            total: 300000
+        );
+
+        $payment = app(PaymentService::class)->postToInvoice(
+            invoice: $invoice,
+            amount: 100000,
+            method: 'cash',
+            reference: 'TEST-PARTIAL',
+            paidAt: now(),
+            notes: 'Automated test partial payment',
+            actorUserId: null
+        );
+
+        $invoice->refresh();
+
+        $this->assertSame('posted', $payment->status);
+        $this->assertSame(100000, (int) $payment->amount);
+
+        $this->assertSame(100000, (int) $invoice->paid_amount);
+        $this->assertSame(200000, (int) $invoice->balance_due);
+        $this->assertSame('partial', $invoice->status);
+        $this->assertNull($invoice->paid_at);
+
+        $this->assertDatabaseHas('payment_allocations', [
+            'payment_id' => $payment->id,
+            'invoice_id' => $invoice->id,
+            'amount' => 100000,
         ]);
     }
 
-    public function store(Request $request, string $tenantSlug): RedirectResponse
+    public function test_full_payment_marks_invoice_as_paid(): void
     {
-        $tenant = Tenant::query()->where('slug', $tenantSlug)->where('status', 'active')->firstOrFail();
-        app()->instance(CurrentTenant::class, new CurrentTenant($tenant));
-        $data = $request->validate([
-            'identity' => ['required', 'string', 'max:190'],
-            'password' => ['required', 'string', 'max:200'],
-        ]);
+        $tenant = $this->createTenant('full');
+        $this->bindTenant($tenant);
 
-        $identity = trim((string) $data['identity']);
-        $rateKey = 'portal-login|'.$tenant->id.'|'.Str::lower($identity).'|'.$request->ip();
-        if (RateLimiter::tooManyAttempts($rateKey, 5)) {
-            $this->event($tenant->id, null, null, 'rate_limited', $request, ['identity_hash' => hash('sha256', Str::lower($identity))]);
-            throw ValidationException::withMessages([
-                'identity' => 'Terlalu banyak percobaan login. Coba lagi dalam '.RateLimiter::availableIn($rateKey).' detik.',
-            ]);
-        }
+        $customer = $this->createCustomer('FULL');
 
-        $account = CustomerPortalAccount::query()
-            ->with('customer:id,tenant_id,customer_number,name,email,status,deleted_at')
-            ->where('tenant_id', $tenant->id)
-            ->where('status', 'active')
-            ->where(function ($q) use ($identity) {
-                $q->whereRaw('LOWER(email) = ?', [Str::lower($identity)])
-                    ->orWhereHas('customer', fn ($customer) => $customer->where('customer_number', $identity));
-            })
-            ->first();
+        $invoice = $this->createInvoice(
+            customer: $customer,
+            total: 275000
+        );
 
-        if (! $account || ! $account->customer || $account->customer->trashed() || ! $account->passwordMatches((string) $data['password'])) {
-            RateLimiter::hit($rateKey, 120);
-            $this->event($tenant->id, $account?->id, $account?->customer_id, 'failed', $request, ['identity_hash' => hash('sha256', Str::lower($identity))]);
-            throw ValidationException::withMessages(['identity' => 'ID pelanggan/email atau password salah.']);
-        }
+        $payment = app(PaymentService::class)->postToInvoice(
+            invoice: $invoice,
+            amount: 275000,
+            method: 'bank_transfer',
+            reference: 'TEST-FULL',
+            paidAt: now(),
+            notes: 'Automated test full payment',
+            actorUserId: null
+        );
 
-        RateLimiter::clear($rateKey);
-        $request->session()->regenerate();
-        $request->session()->put('portal_account_id', $account->id);
-        $request->session()->put('portal_tenant_id', (string) $tenant->id);
-        $account->forceFill(['last_login_at' => now(), 'last_login_ip' => $request->ip()])->save();
-        $this->event($tenant->id, $account->id, $account->customer_id, 'login', $request);
+        $invoice->refresh();
 
-        if ($account->must_change_password) {
-            return redirect()->route('portal.profile', ['tenantSlug' => $tenantSlug])->with('success', 'Silakan ganti password portal sebelum melanjutkan.');
-        }
-        return redirect()->intended(route('portal.dashboard', ['tenantSlug' => $tenantSlug]));
+        $this->assertSame('posted', $payment->status);
+
+        $this->assertSame(275000, (int) $invoice->paid_amount);
+        $this->assertSame(0, (int) $invoice->balance_due);
+        $this->assertSame('paid', $invoice->status);
+        $this->assertNotNull($invoice->paid_at);
+
+        $this->assertSame(
+            1,
+            PaymentAllocation::query()
+                ->where('invoice_id', $invoice->id)
+                ->count()
+        );
     }
 
-    public function destroy(Request $request, string $tenantSlug): RedirectResponse
+    public function test_overpayment_is_rejected_without_creating_payment(): void
     {
-        $accountId = (int) $request->session()->get('portal_account_id', 0);
-        $tenantId = (string) $request->session()->get('portal_tenant_id', '');
-        $this->event($tenantId, $accountId ?: null, null, 'logout', $request);
-        $request->session()->forget(['portal_account_id', 'portal_tenant_id']);
-        $request->session()->regenerateToken();
-        return redirect()->route('portal.login', ['tenantSlug' => $tenantSlug]);
+        $tenant = $this->createTenant('overpay');
+        $this->bindTenant($tenant);
+
+        $customer = $this->createCustomer('OVER');
+
+        $invoice = $this->createInvoice(
+            customer: $customer,
+            total: 200000
+        );
+
+        try {
+            app(PaymentService::class)->postToInvoice(
+                invoice: $invoice,
+                amount: 250000,
+                method: 'cash',
+                reference: 'TEST-OVERPAY',
+                paidAt: now(),
+                notes: null,
+                actorUserId: null
+            );
+
+            $this->fail(
+                'Overpayment seharusnya ditolak.'
+            );
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey(
+                'amount',
+                $exception->errors()
+            );
+        }
+
+        $invoice->refresh();
+
+        $this->assertSame(0, Payment::query()->count());
+        $this->assertSame(0, PaymentAllocation::query()->count());
+
+        $this->assertSame(0, (int) $invoice->paid_amount);
+        $this->assertSame(200000, (int) $invoice->balance_due);
+        $this->assertSame('unpaid', $invoice->status);
     }
 
-    private function event(string $tenantId, ?int $accountId, ?int $customerId, string $event, Request $request, array $meta = []): void
+    private function createTenant(string $suffix): Tenant
     {
-        if ($tenantId === '') return;
-        CustomerPortalLoginEvent::query()->create([
-            'tenant_id' => $tenantId,
-            'customer_portal_account_id' => $accountId,
-            'customer_id' => $customerId,
-            'event' => $event,
-            'ip_address' => $request->ip(),
-            'user_agent' => Str::limit((string) $request->userAgent(), 500, ''),
-            'meta' => $meta ?: null,
-            'created_at' => now(),
+        return Tenant::query()->create([
+            'name' => 'Billing Tenant '.Str::upper($suffix),
+            'slug' => 'billing-'.$suffix.'-'.Str::lower(Str::random(6)),
+            'status' => 'active',
+            'timezone' => 'Asia/Jakarta',
+            'currency' => 'IDR',
         ]);
+    }
+
+    private function createCustomer(string $prefix): Customer
+    {
+        return Customer::query()->create([
+            'customer_number' => $prefix.'-'.Str::upper(Str::random(8)),
+            'name' => 'Customer '.$prefix,
+            'customer_type' => 'residential',
+            'status' => 'active',
+        ]);
+    }
+
+    private function createInvoice(
+        Customer $customer,
+        int $total
+    ): Invoice {
+        $number = 'INV-TEST-'.Str::upper(Str::random(8));
+
+        return Invoice::query()->create([
+            'customer_id' => $customer->id,
+            'customer_service_id' => null,
+            'invoice_number' => $number,
+            'billing_key' => 'test:'.Str::uuid(),
+            'period_start' => today()->startOfMonth(),
+            'period_end' => today()->endOfMonth(),
+            'issued_at' => today(),
+            'due_at' => today()->addDays(10),
+            'subtotal' => $total,
+            'discount' => 0,
+            'tax' => 0,
+            'total' => $total,
+            'paid_amount' => 0,
+            'balance_due' => $total,
+            'status' => 'unpaid',
+        ]);
+    }
+
+    private function bindTenant(Tenant $tenant): void
+    {
+        app()->instance(
+            CurrentTenant::class,
+            new CurrentTenant($tenant)
+        );
     }
 }

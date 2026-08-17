@@ -58,17 +58,18 @@ jobs:
       CACHE_STORE: array
       CACHE_LIMITER: array
       SESSION_DRIVER: array
-      SESSION_SECURE_COOKIE: false
+      SESSION_SECURE_COOKIE: true
       QUEUE_CONNECTION: sync
 
       MAIL_MAILER: array
 
-      FORCE_HTTPS: false
+      FORCE_HTTPS: true
       TRUSTED_PROXIES: ""
+      RADIUS_CLIENT_NETWORK: 10.10.10.1/32
 
-      HEALTH_TOKEN: ""
-      JARINGANKU_VERSION: 1.3.0-ci
-      RELEASE_CHANNEL: ci
+      HEALTH_TOKEN: "ci-jaringanku-health-token-2026"
+      JARINGANKU_VERSION: 1.3.0-dev
+      RELEASE_CHANNEL: development
 
     steps:
       - name: Checkout repository
@@ -124,6 +125,9 @@ jobs:
 
       - name: Run database migrations
         run: php artisan migrate --force
+
+      - name: Run strict security acceptance audit
+        run: php artisan jaringanku:phase15-security-audit --strict --no-persist
 
       - name: Run Laravel automated tests
         run: php artisan test --colors=always
