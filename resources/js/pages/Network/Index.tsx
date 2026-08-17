@@ -20,7 +20,7 @@ type NasRow = {id:number;router_id?:number;nasname:string;shortname:string;type:
 type PlanRow = {id:number;name:string;code:string;price:number;download_kbps:number;upload_kbps:number;acct_interim_interval:number;active:boolean;radius_attributes?:Record<string,string>};
 type PoolRow = {id:number;name:string;start_ip:string;end_ip:string;gateway?:string;active:boolean};
 
-const input = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-50';
+const input = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-500 focus:border-blue-400 focus:ring-4 focus:ring-blue-50';
 const primaryBtn = 'rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50';
 const secondaryBtn = 'rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40';
 const dangerBtn = 'rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100';
@@ -72,7 +72,7 @@ export default function NetworkIndex({routers,nas,plans,pools,radius}:{routers:R
           <input className={input} type="password" value={radiusForm.data.password} onChange={e=>radiusForm.setData('password',e.target.value)} placeholder="Password test (tidak disimpan)" autoComplete="off"/>
           <button className={primaryBtn} disabled={radiusForm.processing||!radiusForm.data.password}>Test Access-Request</button>
         </form> : <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">Mode read-only. Anda dapat memantau status RADIUS, tetapi tidak dapat mengirim Access-Request.</div>}
-        {page.flash?.radius_test?.output&&<pre className="mt-4 max-h-52 overflow-auto rounded-xl bg-slate-950 p-4 text-xs leading-5 text-slate-200 whitespace-pre-wrap">{page.flash.radius_test.output}</pre>}
+        {page.flash?.radius_test?.output&&<pre className="mt-4 max-h-52 overflow-auto rounded-xl bg-slate-50 p-4 text-xs leading-5 text-slate-800 whitespace-pre-wrap">{page.flash.radius_test.output}</pre>}
       </Surface>
 
       <section className="grid gap-6 xl:grid-cols-2">
@@ -91,7 +91,7 @@ export default function NetworkIndex({routers,nas,plans,pools,radius}:{routers:R
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2"><span className="font-bold text-slate-800">{r.name}</span><Status value={r.status}/></div>
                 <div className="mt-1 text-xs text-slate-500">{r.host}:{r.rest_port} · {r.board_name||'board unknown'} · RouterOS {r.routeros_version||'-'}</div>
-                <div className="mt-1 text-[11px] text-slate-400">Last seen: {formatDate(r.last_seen_at)}</div>
+                <div className="mt-1 text-[11px] text-slate-500">Last seen: {formatDate(r.last_seen_at)}</div>
                 {r.last_error&&<div className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{r.last_error}</div>}
               </div>
               {canManage&&<div className="flex shrink-0 gap-2"><button onClick={()=>inertiaRouter.post(`/network/routers/${r.id}/test`,{}, {preserveScroll:true})} className={secondaryBtn}>Test</button><button onClick={()=>del(`/network/routers/${r.id}`)} className={dangerBtn}>Hapus</button></div>}
@@ -110,7 +110,7 @@ export default function NetworkIndex({routers,nas,plans,pools,radius}:{routers:R
             <button className={`${primaryBtn} md:col-span-2`} disabled={nasForm.processing}>Tambah & Sync NAS</button>
           </form>}
           <div className="space-y-3">{nas.map(n=><div key={n.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start"><div><div className="flex items-center gap-2 font-bold text-slate-800"><Database size={15} className="text-slate-400"/>{n.shortname}<span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${n.active?'bg-emerald-50 text-emerald-700':'bg-slate-100 text-slate-500'}`}>{n.active?'ACTIVE':'INACTIVE'}</span></div><div className="mt-1 text-xs text-slate-500">{n.nasname} · {n.type} · CoA {n.coa_port} · {n.router?.name||'no router'}</div></div>{canManage&&<div className="flex gap-2"><button onClick={()=>inertiaRouter.post(`/network/nas/${n.id}/sync`,{}, {preserveScroll:true})} className={secondaryBtn}>Sync</button><button onClick={()=>del(`/network/nas/${n.id}`)} className={dangerBtn}>Hapus</button></div>}</div>
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start"><div><div className="flex items-center gap-2 font-bold text-slate-800"><Database size={15} className="text-slate-500"/>{n.shortname}<span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${n.active?'bg-emerald-50 text-emerald-700':'bg-slate-100 text-slate-500'}`}>{n.active?'ACTIVE':'INACTIVE'}</span></div><div className="mt-1 text-xs text-slate-500">{n.nasname} · {n.type} · CoA {n.coa_port} · {n.router?.name||'no router'}</div></div>{canManage&&<div className="flex gap-2"><button onClick={()=>inertiaRouter.post(`/network/nas/${n.id}/sync`,{}, {preserveScroll:true})} className={secondaryBtn}>Sync</button><button onClick={()=>del(`/network/nas/${n.id}`)} className={dangerBtn}>Hapus</button></div>}</div>
           </div>)}{nas.length===0&&<EmptyState text="Belum ada NAS/RADIUS client untuk tenant ini."/>}</div>
           <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800">FreeRADIUS SQL clients dibaca saat service startup. Setelah NAS baru disinkronkan, restart service RADIUS sesuai prosedur deployment. MikroTik CoA/Disconnect Jaringanku menggunakan port 3799.</div>
         </Surface>
@@ -138,12 +138,12 @@ export default function NetworkIndex({routers,nas,plans,pools,radius}:{routers:R
             <input className={input} value={poolForm.data.end_ip} onChange={e=>poolForm.setData('end_ip',e.target.value)} placeholder="End IP"/>
             <button className={`${primaryBtn} md:col-span-2`} disabled={poolForm.processing}>Tambah Pool</button>
           </form>}
-          <div className="space-y-3">{pools.map(p=><div key={p.id} className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row"><div><div className="flex items-center gap-2 font-bold text-slate-800"><Cable size={15} className="text-slate-400"/>{p.name}</div><div className="mt-1 font-mono text-xs text-slate-500">{p.start_ip} — {p.end_ip} · GW {p.gateway||'-'}</div></div>{canManage&&<button onClick={()=>del(`/network/pools/${p.id}`)} className={`${dangerBtn} h-fit`}>Hapus</button>}</div>)}{pools.length===0&&<EmptyState text="Belum ada IP pool."/>}</div>
+          <div className="space-y-3">{pools.map(p=><div key={p.id} className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row"><div><div className="flex items-center gap-2 font-bold text-slate-800"><Cable size={15} className="text-slate-500"/>{p.name}</div><div className="mt-1 font-mono text-xs text-slate-500">{p.start_ip} — {p.end_ip} · GW {p.gateway||'-'}</div></div>{canManage&&<button onClick={()=>del(`/network/pools/${p.id}`)} className={`${dangerBtn} h-fit`}>Hapus</button>}</div>)}{pools.length===0&&<EmptyState text="Belum ada IP pool."/>}</div>
         </Surface>
       </section>
 
       <Surface>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-start gap-3"><div className="rounded-xl bg-blue-50 p-2 text-blue-700"><Wifi size={18}/></div><div><div className="font-bold text-slate-800">Live RADIUS Accounting</div><div className="mt-1 text-xs text-slate-500">Pantau PPPoE online, framed IP, traffic, stale accounting, CoA, dan Disconnect.</div></div></div><Link href="/network/sessions" className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"><Network size={16}/> Buka Online Sessions</Link></div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-start gap-3"><div className="rounded-xl bg-blue-50 p-2 text-blue-700"><Wifi size={18}/></div><div><div className="font-bold text-slate-800">Live RADIUS Accounting</div><div className="mt-1 text-xs text-slate-500">Pantau PPPoE online, framed IP, traffic, stale accounting, CoA, dan Disconnect.</div></div></div><Link href="/network/sessions" className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-100"><Network size={16}/> Buka Online Sessions</Link></div>
       </Surface>
     </div>
   </Layout>;
