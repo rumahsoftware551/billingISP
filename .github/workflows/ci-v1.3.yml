@@ -3,7 +3,7 @@ name: Jaringanku V1.3 CI
 on:
   push:
     branches:
-      - upgrade/v1.3.0-foundation
+      - 'upgrade/**'
       - develop
 
   pull_request:
