@@ -11,8 +11,9 @@ class Router extends Model
     use BelongsToTenant;
 
     protected $fillable = [
-        'tenant_id', 'name', 'host', 'rest_port', 'api_username', 'api_password',
-        'verify_tls', 'status', 'routeros_version', 'board_name', 'last_seen_at', 'last_error',
+        'tenant_id', 'name', 'host', 'api_driver', 'api_port', 'rest_port',
+        'api_username', 'api_password', 'verify_tls', 'status',
+        'routeros_version', 'board_name', 'last_seen_at', 'last_error',
     ];
 
     protected $hidden = ['api_password_encrypted'];
@@ -20,6 +21,8 @@ class Router extends Model
     protected function casts(): array
     {
         return [
+            'api_port' => 'integer',
+            'rest_port' => 'integer',
             'verify_tls' => 'boolean',
             'last_seen_at' => 'datetime',
         ];

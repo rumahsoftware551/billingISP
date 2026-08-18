@@ -15,7 +15,7 @@ import Layout from '../../components/Layout';
 import {EmptyState, MetricCard, PageHeader, Surface} from '../../components/Ui';
 import {useAccess} from '../../hooks/useAccess';
 
-type RouterRow = {id:number;name:string;host:string;rest_port:number;api_username:string;verify_tls:boolean;status:string;routeros_version?:string;board_name?:string;last_seen_at?:string;last_error?:string};
+type RouterRow = {id:number;name:string;host:string;api_driver:'api'|'api_ssl'|'rest';api_port:number;rest_port:number;api_username:string;verify_tls:boolean;status:string;routeros_version?:string;board_name?:string;last_seen_at?:string;last_error?:string};
 type NasRow = {id:number;router_id?:number;nasname:string;shortname:string;type:string;coa_port:number;active:boolean;description?:string;router?:{id:number;name:string}};
 type PlanRow = {id:number;name:string;code:string;price:number;download_kbps:number;upload_kbps:number;acct_interim_interval:number;active:boolean;radius_attributes?:Record<string,string>};
 type PoolRow = {id:number;name:string;start_ip:string;end_ip:string;gateway?:string;active:boolean};
@@ -30,11 +30,11 @@ export default function NetworkIndex({routers,nas,plans,pools,radius}:{routers:R
   const {can} = useAccess();
   const canManage = can('network.manage');
 
-  const routerForm = useForm({name:'',host:'',rest_port:443,api_username:'api-jaringanku',api_password:'',verify_tls:false});
+  const routerForm = useForm({name:'',host:'',api_driver:'api',api_port:8728,rest_port:443,api_username:'api-jaringanku',api_password:'',verify_tls:false});
   const nasForm = useForm({router_id:'',nasname:'',shortname:'',type:'mikrotik',secret:'',coa_port:3799,description:''});
   const planForm = useForm({name:'',code:'',price:250000,download_kbps:20000,upload_kbps:10000,acct_interim_interval:300});
   const poolForm = useForm({name:'',start_ip:'10.10.10.2',end_ip:'10.10.10.254',gateway:'10.10.10.1'});
-  const radiusForm = useForm({username:'phase2-test',password:''});
+  const radiusForm = useForm({username:radius.test_username||'',password:''});
 
   const onlineRouters = routers.filter(r=>r.status==='online').length;
   const activeNas = nas.filter(n=>n.active).length;
@@ -64,7 +64,7 @@ export default function NetworkIndex({routers,nas,plans,pools,radius}:{routers:R
 
       <Surface title="FreeRADIUS Authentication" subtitle="Status dan uji Access-Request ke FreeRADIUS. Uji autentikasi hanya tersedia untuk user dengan hak kelola network.">
         <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
-          <span className={`rounded-full px-2.5 py-1 font-semibold ${radius.test_ready?'bg-emerald-50 text-emerald-700':'bg-rose-50 text-rose-700'}`}>{radius.test_ready?'SQL test account ready':'SQL test account belum siap'}</span>
+          <span className={`rounded-full px-2.5 py-1 font-semibold ${radius.test_ready?'bg-emerald-50 text-emerald-700':'bg-rose-50 text-rose-700'}`}>{radius.test_ready?'RADIUS SQL projection ready':'RADIUS SQL projection belum siap'}</span>
           <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-600">UDP 1812 / 1813</span>
         </div>
         {canManage ? <form className="grid gap-3 md:grid-cols-3" onSubmit={e=>{e.preventDefault();radiusForm.post('/network/radius/test',{preserveScroll:true});}}>
@@ -76,21 +76,28 @@ export default function NetworkIndex({routers,nas,plans,pools,radius}:{routers:R
       </Surface>
 
       <section className="grid gap-6 xl:grid-cols-2">
-        <Surface title="Routers / MikroTik REST" subtitle="Inventaris dan health status RouterOS yang terhubung ke tenant.">
+        <Surface title="Routers / MikroTik" subtitle="Mendukung RouterOS v6 Classic API (8728/8729) dan RouterOS v7 REST HTTPS.">
           {canManage&&<form className="mb-5 grid gap-3 md:grid-cols-2" onSubmit={e=>{e.preventDefault();routerForm.post('/network/routers',{preserveScroll:true,onSuccess:()=>routerForm.reset('name','host','api_password')});}}>
             <input className={input} value={routerForm.data.name} onChange={e=>routerForm.setData('name',e.target.value)} placeholder="Nama router"/>
             <input className={input} value={routerForm.data.host} onChange={e=>routerForm.setData('host',e.target.value)} placeholder="IP / hostname"/>
-            <input className={input} type="number" value={routerForm.data.rest_port} onChange={e=>routerForm.setData('rest_port',Number(e.target.value))} placeholder="REST port"/>
+            <select className={input} value={routerForm.data.api_driver} onChange={e=>{const driver=e.target.value as 'api'|'api_ssl'|'rest';routerForm.setData('api_driver',driver);if(driver==='api')routerForm.setData('api_port',8728);if(driver==='api_ssl')routerForm.setData('api_port',8729);if(driver==='rest')routerForm.setData('rest_port',443);}}>
+              <option value="api">RouterOS v6/v7 Classic API (TCP 8728)</option>
+              <option value="api_ssl">RouterOS v6/v7 API-SSL (TCP 8729)</option>
+              <option value="rest">RouterOS v7 REST (HTTPS)</option>
+            </select>
+            {routerForm.data.api_driver==='rest'
+              ? <input className={input} type="number" value={routerForm.data.rest_port} onChange={e=>routerForm.setData('rest_port',Number(e.target.value))} placeholder="REST HTTPS port"/>
+              : <input className={input} type="number" value={routerForm.data.api_port} onChange={e=>routerForm.setData('api_port',Number(e.target.value))} placeholder="RouterOS API port"/>}
             <input className={input} value={routerForm.data.api_username} onChange={e=>routerForm.setData('api_username',e.target.value)} placeholder="Username RouterOS"/>
             <input className={input} type="password" value={routerForm.data.api_password} onChange={e=>routerForm.setData('api_password',e.target.value)} placeholder="Password RouterOS" autoComplete="new-password"/>
-            <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600"><input type="checkbox" checked={routerForm.data.verify_tls} onChange={e=>routerForm.setData('verify_tls',e.target.checked)}/> Verify TLS certificate</label>
+            <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600"><input type="checkbox" checked={routerForm.data.verify_tls} onChange={e=>routerForm.setData('verify_tls',e.target.checked)} disabled={routerForm.data.api_driver==='api'}/> Verify TLS certificate</label>
             <button className={`${primaryBtn} md:col-span-2`} disabled={routerForm.processing}>Tambah Router</button>
           </form>}
           <div className="space-y-3">{routers.map(r=><div key={r.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2"><span className="font-bold text-slate-800">{r.name}</span><Status value={r.status}/></div>
-                <div className="mt-1 text-xs text-slate-500">{r.host}:{r.rest_port} · {r.board_name||'board unknown'} · RouterOS {r.routeros_version||'-'}</div>
+                <div className="mt-1 text-xs text-slate-500">{r.host}:{r.api_driver==='rest'?r.rest_port:r.api_port} · {r.api_driver==='rest'?'REST':r.api_driver==='api_ssl'?'API-SSL':'Classic API'} · {r.board_name||'board unknown'} · RouterOS {r.routeros_version||'-'}</div>
                 <div className="mt-1 text-[11px] text-slate-500">Last seen: {formatDate(r.last_seen_at)}</div>
                 {r.last_error&&<div className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{r.last_error}</div>}
               </div>

@@ -8,7 +8,7 @@ use Illuminate\Console\Command;
 
 class NetworkHealthCommand extends Command
 {
-    protected $signature = 'jaringanku:network-health {--tenant= : Optional tenant slug} {--probe-routers : Probe MikroTik REST endpoints} {--strict : Fail on projection drift or router probe failure}';
+    protected $signature = 'jaringanku:network-health {--tenant= : Optional tenant slug} {--probe-routers : Probe MikroTik RouterOS endpoints} {--strict : Fail on projection drift or router probe failure}';
     protected $description = 'Inspect tenant network health, RADIUS projections, accounting freshness, and optional MikroTik reachability.';
 
     public function handle(NetworkHealthService $health): int
