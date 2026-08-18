@@ -46,6 +46,11 @@ class BillingController extends Controller
             ->paginate(20)
             ->withQueryString();
 
+        $invoicedThisMonth = (int) Invoice::whereBetween('issued_at', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])->sum('total');
+        $paidThisMonth = (int) Payment::where('status', 'posted')->whereBetween('paid_at', [now()->startOfMonth(), now()->endOfMonth()])->sum('amount');
+        $outstanding = (int) Invoice::whereIn('status', ['unpaid', 'partial', 'overdue'])->sum('balance_due');
+        $overdueOutstanding = (int) Invoice::where('status', 'overdue')->sum('balance_due');
+
         return Inertia::render('Billing/Index', [
             'invoices' => $invoices,
             'payments' => Payment::query()
@@ -58,9 +63,13 @@ class BillingController extends Controller
                 'invoice_count' => Invoice::count(),
                 'unpaid_count' => Invoice::whereIn('status', ['unpaid', 'partial', 'overdue'])->count(),
                 'overdue_count' => Invoice::where('status', 'overdue')->count(),
-                'outstanding' => (int) Invoice::whereIn('status', ['unpaid', 'partial', 'overdue'])->sum('balance_due'),
-                'paid_this_month' => (int) Payment::where('status', 'posted')->whereBetween('paid_at', [now()->startOfMonth(), now()->endOfMonth()])->sum('amount'),
-                'invoiced_this_month' => (int) Invoice::whereBetween('issued_at', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])->sum('total'),
+                'outstanding' => $outstanding,
+                'overdue_outstanding' => $overdueOutstanding,
+                'partial_count' => Invoice::where('status', 'partial')->count(),
+                'paid_today' => (int) Payment::where('status', 'posted')->whereBetween('paid_at', [now()->startOfDay(), now()->endOfDay()])->sum('amount'),
+                'paid_this_month' => $paidThisMonth,
+                'invoiced_this_month' => $invoicedThisMonth,
+                'collection_rate' => $invoicedThisMonth > 0 ? round(($paidThisMonth / $invoicedThisMonth) * 100, 1) : 0.0,
             ],
         ]);
     }

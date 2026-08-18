@@ -212,6 +212,40 @@ Artisan::command('jaringanku:billing-due-run {date? : As-of date in YYYY-MM-DD} 
     return $exit;
 })->purpose('Generate recurring invoices only for active services whose billing day is due, with catch-up after scheduler downtime.');
 
+Artisan::command('jaringanku:payment-reconcile {--tenant= : Optional tenant slug} {--check : Detect mismatches without repairing}', function () {
+    $query = \App\Models\Tenant::query();
+    if ($slug = $this->option('tenant')) {
+        $query->where('slug', $slug);
+    }
+
+    $tenants = $query->get();
+    if ($tenants->isEmpty()) {
+        $this->error('Tenant tidak ditemukan.');
+        return 2;
+    }
+
+    $repair = ! (bool) $this->option('check');
+    $exit = 0;
+
+    foreach ($tenants as $tenant) {
+        $stats = app(\App\Services\PaymentReconciliationService::class)->reconcileTenant($tenant, $repair);
+        $this->line(sprintf(
+            '%s: scanned=%d mismatches=%d repaired=%d violations=%d',
+            $tenant->slug,
+            $stats['scanned'],
+            $stats['mismatches'],
+            $stats['repaired'],
+            $stats['violations']
+        ));
+
+        if ($stats['violations'] > 0 || (! $repair && $stats['mismatches'] > 0)) {
+            $exit = 3;
+        }
+    }
+
+    return $exit;
+})->purpose('Reconcile invoice paid/balance/status fields from posted payment allocations.');
+
 Artisan::command('jaringanku:billing-refresh', function () {
     $total = 0;
     foreach (\App\Models\Tenant::query()->get() as $tenant) {
@@ -858,6 +892,7 @@ Artisan::command('jaringanku:phase10-smoke', function () {
 })->purpose('Validate customer portal account, tenant scoping, PDF, routes, and PWA assets.');
 
 \Illuminate\Support\Facades\Schedule::command('jaringanku:billing-refresh')->dailyAt('00:10')->withoutOverlapping();
+\Illuminate\Support\Facades\Schedule::command('jaringanku:payment-reconcile')->dailyAt('00:15')->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('jaringanku:billing-due-run')->dailyAt('00:20')->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('jaringanku:automation-run')->everyTenMinutes()->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('jaringanku:payment-expire')->everyFiveMinutes()->withoutOverlapping();

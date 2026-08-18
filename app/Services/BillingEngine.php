@@ -13,7 +13,11 @@ use Throwable;
 
 class BillingEngine
 {
-    public function __construct(private TenantSequenceService $sequences, private PaymentNotificationService $notifications) {}
+    public function __construct(
+        private TenantSequenceService $sequences,
+        private PaymentNotificationService $notifications,
+        private BillingCalendar $calendar,
+    ) {}
 
     public function generateForService(CustomerService $service, CarbonImmutable $periodStart): Invoice
     {
@@ -29,12 +33,9 @@ class BillingEngine
                 return $existing->load(['items', 'customer', 'service.plan']);
             }
 
-            $issueDay = max(1, min(28, (int) $service->billing_day));
-            $dueDay = max(1, min(28, (int) $service->due_day));
-            $issuedAt = $periodStart->setDay($issueDay);
-            $dueAt = $dueDay >= $issueDay
-                ? $periodStart->setDay($dueDay)
-                : $periodStart->addMonthNoOverflow()->setDay($dueDay);
+            $dates = $this->calendar->datesForService($service, $periodStart);
+            $issuedAt = $dates['issued_at'];
+            $dueAt = $dates['due_at'];
 
             $price = max(0, (int) $service->plan->price);
             $invoiceNumber = $this->sequences->next(
@@ -94,7 +95,7 @@ class BillingEngine
         $asOf = $asOf->startOfDay();
         $periodStart = $asOf->startOfMonth();
         $periodEnd = $periodStart->endOfMonth();
-        $effectiveBillingDay = min(28, $asOf->day);
+        $effectiveBillingDay = $this->calendar->normalizeDay($asOf->day);
         $runKey = 'scheduled:'.$asOf->format('Y-m-d');
 
         $run = BillingRun::query()->firstOrCreate(

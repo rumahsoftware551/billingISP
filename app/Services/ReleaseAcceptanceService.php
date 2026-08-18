@@ -180,6 +180,10 @@ class ReleaseAcceptanceService
         $this->add('billing.payment_allocation','reconciliation',$overPayment===0?'pass':'fail','critical','Payment allocations never exceed payment amount',"violations={$overPayment}",'Repair payment allocations and re-run invoice reconciliation.');
         $badInvoices=DB::table('invoices')->whereColumn('paid_amount','>','total')->orWhereColumn('balance_due','>','total')->count();
         $this->add('billing.invoice_totals','reconciliation',$badInvoices===0?'pass':'fail','critical','Invoice paid/balance fields stay within total',"violations={$badInvoices}",'Recalculate affected invoices from payment allocations.');
+        $duplicatePendingProofs=DB::table('manual_payment_proofs')->where('status','pending')->select('tenant_id','invoice_id')->groupBy('tenant_id','invoice_id')->havingRaw('COUNT(*) > 1')->get()->count();
+        $this->add('billing.manual_payment_pending','reconciliation',$duplicatePendingProofs===0?'pass':'fail','high','Only one pending manual payment proof exists per invoice',"duplicates={$duplicatePendingProofs}",'Review duplicate pending proofs and keep one canonical submission.');
+        $approvedWithoutPayment=DB::table('manual_payment_proofs')->where('status','approved')->whereNull('payment_id')->count();
+        $this->add('billing.manual_payment_link','reconciliation',$approvedWithoutPayment===0?'pass':'fail','critical','Approved manual payment proofs are linked to posted payments',"violations={$approvedWithoutPayment}",'Repair approved proof records so every approval references its posted payment.');
     }
 
     private function checkPartnerReconciliation(): void

@@ -11,6 +11,7 @@ use App\Models\ServiceStatusHistory;
 use App\Models\ServiceSuspension;
 use App\Models\Tenant;
 use App\Support\CurrentTenant;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Throwable;
@@ -21,6 +22,7 @@ class BillingAutomationService
         private readonly BillingEngine $billing,
         private readonly RadiusProjectionService $radius,
         private readonly RadiusCoaService $coa,
+        private readonly BillingCalendar $calendar,
     ) {}
 
     public function policy(): BillingProfile
@@ -39,11 +41,15 @@ class BillingAutomationService
         );
     }
 
-    public function blockingInvoice(CustomerService $service, ?BillingProfile $policy = null): ?Invoice
-    {
+    public function blockingInvoice(
+        CustomerService $service,
+        ?BillingProfile $policy = null,
+        ?CarbonImmutable $asOf = null,
+    ): ?Invoice {
         $policy ??= $this->policy();
         $graceDays = max(0, (int) $policy->grace_days);
-        $cutoff = today()->subDays($graceDays)->toDateString();
+        $asOf ??= CarbonImmutable::today();
+        $cutoff = $this->calendar->blockingCutoff($asOf, $graceDays)->toDateString();
 
         return Invoice::query()
             ->where('customer_service_id', $service->id)

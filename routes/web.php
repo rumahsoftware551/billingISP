@@ -24,6 +24,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Billing\BillingController;
 use App\Http\Controllers\Billing\InvoiceController;
 use App\Http\Controllers\Billing\PaymentController;
+use App\Http\Controllers\Billing\ReceiptController;
 use App\Http\Controllers\Billing\PaymentGatewayController;
 use App\Http\Controllers\Integrations\IntegrationsController;
 use App\Http\Controllers\Network\IpPoolController;
@@ -228,6 +229,8 @@ Route::middleware(['auth', 'tenant', 'subscription'])->group(function () {
     Route::get('/billing', [BillingController::class, 'index'])->middleware('permission:billing.view')->name('billing.index');
     Route::post('/billing/run', [BillingController::class, 'run'])->middleware('permission:billing.manage')->name('billing.run');
     Route::get('/billing/invoices/{invoice}', [InvoiceController::class, 'show'])->middleware('permission:billing.view')->name('billing.invoices.show');
+    Route::get('/billing/invoices/{invoice}/download', [InvoiceController::class, 'download'])->middleware('permission:billing.view')->name('billing.invoices.download');
+    Route::get('/billing/payments/{payment}/receipt', [ReceiptController::class, 'download'])->middleware('permission:billing.view')->name('billing.payments.receipt');
     Route::post('/billing/invoices/{invoice}/payments', [PaymentController::class, 'store'])->middleware('permission:billing.manage')->name('billing.invoices.payments.store');
     Route::post('/billing/invoices/{invoice}/gateway', [PaymentGatewayController::class, 'store'])->middleware('permission:billing.manage')->name('billing.invoices.gateway.store');
     Route::get('/billing/gateway-transactions/{transaction}/mock', [PaymentGatewayController::class, 'mock'])->middleware('permission:billing.manage')->name('billing.gateway.mock');
