@@ -16,6 +16,7 @@ class RadiusCoaService
     /** @return array<string,mixed> */
     public function disconnectSession(Radacct $session, ?int $actorUserId = null): array
     {
+        $this->assertOnlineSession($session);
         [$service, $nas] = $this->context($session);
         $lines = $this->sessionIdentityLines($session);
 
@@ -25,7 +26,11 @@ class RadiusCoaService
     /** @return array<string,mixed> */
     public function applyPlanToSession(Radacct $session, ?int $actorUserId = null): array
     {
+        $this->assertOnlineSession($session);
         [$service, $nas] = $this->context($session);
+        if ($service->status !== 'active') {
+            throw new RuntimeException('CoA plan hanya boleh dikirim untuk layanan aktif.');
+        }
         $service->loadMissing('plan');
         if (! $service->plan) {
             throw new RuntimeException('Layanan tidak memiliki Internet Plan.');
@@ -100,6 +105,13 @@ class RadiusCoaService
         }
 
         return $result;
+    }
+
+    private function assertOnlineSession(Radacct $session): void
+    {
+        if ($session->acctstoptime !== null) {
+            throw new RuntimeException('Session RADIUS sudah closed; CoA/Disconnect dibatalkan.');
+        }
     }
 
     /** @return array{0:CustomerService,1:NetworkNas} */

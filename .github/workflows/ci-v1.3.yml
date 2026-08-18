@@ -127,6 +127,11 @@ jobs:
       - name: Run strict security acceptance audit
         run: php artisan jaringanku:phase15-security-audit --strict --no-persist
 
+      - name: Run network commercial acceptance gate
+
+        run: php artisan jaringanku:network-acceptance --strict
+
+
       - name: Run Laravel automated tests
         run: php artisan test --colors=always
 
