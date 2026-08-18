@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'upgrade/**'
+      - 'release/**'
       - develop
 
   pull_request:
@@ -130,6 +131,13 @@ jobs:
       - name: Run network commercial acceptance gate
 
         run: php artisan jaringanku:network-acceptance --strict
+
+
+      - name: Run V1.3 release candidate source gate
+
+
+        run: bash scripts/release-candidate-check.sh
+
 
 
       - name: Run Laravel automated tests

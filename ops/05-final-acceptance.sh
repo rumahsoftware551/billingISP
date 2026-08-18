@@ -24,7 +24,7 @@ for svc in postgres redis app radius queue scheduler nginx backup; do
 done
 
 curl -fsS "https://${DOMAIN}/health/live" >/dev/null
-curl -fsS "https://${DOMAIN}/version" | grep -q '1.2.0-dev'
+curl -fsS "https://${DOMAIN}/version" | grep -q '1.3.0-rc1'
 HEALTH_TOKEN=$(cat secrets/health_token.txt)
 curl -fsS -H "X-Health-Token: ${HEALTH_TOKEN}" "https://${DOMAIN}/health/ready" >/dev/null
 
@@ -36,6 +36,6 @@ sha256sum -c "${latest}.sha256"
 
 printf '\n[OK] JARINGANKU PHASE 16 VPS PILOT ACCEPTANCE PASSED\n'
 printf 'URL       : https://%s\n' "$DOMAIN"
-printf 'Version   : 1.2.0-dev / development (Phase 16 FULL V3)\n'
+printf 'Version   : 1.3.0-rc1 / release-candidate (V1.3 RC1)\n'
 printf 'Backup    : %s\n' "$latest"
 printf 'Next      : hubungkan MikroTik produksi dan uji 3-10 pelanggan pilot sebelum mass onboarding.\n'
