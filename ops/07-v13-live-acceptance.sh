@@ -41,7 +41,7 @@ grep -q 'Access-Accept' /tmp/jaringanku-radius-acceptance.log || {
 
 echo "[4/7] HTTPS/live version"
 curl -fsS "https://${DOMAIN}/health/live" >/dev/null
-curl -fsS "https://${DOMAIN}/version" | grep -q '1.3.0-rc1'
+curl -fsS "https://${DOMAIN}/version" | grep -q '1.3.0-rc2'
 
 echo "[5/7] Readiness endpoint"
 HEALTH_TOKEN="$(cat secrets/health_token.txt)"

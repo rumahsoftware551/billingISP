@@ -114,18 +114,44 @@ Artisan::command('jaringanku:accounting-smoke {--leave-open : Leave the syntheti
     return 0;
 })->purpose('Send Start/Interim/Stop packets through FreeRADIUS and verify radacct.');
 
-Artisan::command('jaringanku:radius-resync', function () {
+Artisan::command('jaringanku:radius-resync {--tenant= : Optional tenant slug}', function () {
     $projection = app(\App\Services\RadiusProjectionService::class);
+
+    $tenantQuery = \App\Models\Tenant::query();
+
+    if ($slug = $this->option('tenant')) {
+        $tenantQuery->where('slug', $slug);
+    }
+
+    $tenants = $tenantQuery->orderBy('id')->get();
+
+    if ($tenants->isEmpty()) {
+        $this->error('Tenant tidak ditemukan.');
+        return 2;
+    }
+
     $count = 0;
-    \App\Models\CustomerService::query()
-        ->where('status', 'active')
-        ->orderBy('id')
-        ->chunkById(100, function ($services) use ($projection, &$count) {
-            foreach ($services as $service) {
-                $projection->syncService($service);
-                $count++;
-            }
-        });
+
+    try {
+        foreach ($tenants as $tenant) {
+            app()->instance(
+                \App\Support\CurrentTenant::class,
+                new \App\Support\CurrentTenant($tenant)
+            );
+
+            \App\Models\CustomerService::query()
+                ->where('status', 'active')
+                ->orderBy('id')
+                ->chunkById(100, function ($services) use ($projection, &$count) {
+                    foreach ($services as $service) {
+                        $projection->syncService($service);
+                        $count++;
+                    }
+                });
+        }
+    } finally {
+        app()->forgetInstance(\App\Support\CurrentTenant::class);
+    }
 
     $this->info("RADIUS projection resynced for {$count} active service(s).");
     return 0;
