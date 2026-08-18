@@ -9,7 +9,7 @@ class V13ReleaseCandidateSourceTest extends TestCase
     public function test_release_candidate_metadata_is_consistent(): void
     {
         $this->assertSame(
-            '1.3.0-rc2',
+            '1.3.0-rc3',
             trim((string) file_get_contents(base_path('VERSION.txt')))
         );
 
@@ -19,7 +19,7 @@ class V13ReleaseCandidateSourceTest extends TestCase
             flags: JSON_THROW_ON_ERROR
         );
 
-        $this->assertSame('1.3.0-rc2', $phase['product_version'] ?? null);
+        $this->assertSame('1.3.0-rc3', $phase['product_version'] ?? null);
         $this->assertSame('release-candidate', $phase['release_channel'] ?? null);
     }
 
@@ -32,7 +32,7 @@ class V13ReleaseCandidateSourceTest extends TestCase
         $this->assertStringContainsString('SESSION_SECURE_COOKIE=true', $env);
         $this->assertStringContainsString('FORCE_HTTPS=true', $env);
         $this->assertStringContainsString('SEED_DEMO_DATA=false', $env);
-        $this->assertStringContainsString('JARINGANKU_VERSION=1.3.0-rc2', $env);
+        $this->assertStringContainsString('JARINGANKU_VERSION=1.3.0-rc3', $env);
         $this->assertStringContainsString('RELEASE_CHANNEL=release-candidate', $env);
     }
 

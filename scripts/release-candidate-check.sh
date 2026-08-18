@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-EXPECTED_VERSION="1.3.0-rc2"
+EXPECTED_VERSION="1.3.0-rc3"
 EXPECTED_CHANNEL="release-candidate"
 
 fail() {
@@ -14,7 +14,7 @@ fail() {
 [ -f VERSION.txt ] || fail "VERSION.txt missing"
 [ "$(tr -d '\r\n' < VERSION.txt)" = "$EXPECTED_VERSION" ] || fail "VERSION.txt must be $EXPECTED_VERSION"
 
-grep -q '"product_version"[[:space:]]*:[[:space:]]*"1.3.0-rc2"' PHASE.json || fail "PHASE.json product_version mismatch"
+grep -q '"product_version"[[:space:]]*:[[:space:]]*"1.3.0-rc3"' PHASE.json || fail "PHASE.json product_version mismatch"
 grep -q '"release_channel"[[:space:]]*:[[:space:]]*"release-candidate"' PHASE.json || fail "PHASE.json release_channel mismatch"
 
 [ -f composer.lock ] || fail "composer.lock missing"
@@ -27,7 +27,7 @@ grep -q '^APP_DEBUG=false$' .env.production.example || fail "APP_DEBUG must be f
 grep -q '^SESSION_SECURE_COOKIE=true$' .env.production.example || fail "SESSION_SECURE_COOKIE must be true"
 grep -q '^FORCE_HTTPS=true$' .env.production.example || fail "FORCE_HTTPS must be true"
 grep -q '^SEED_DEMO_DATA=false$' .env.production.example || fail "SEED_DEMO_DATA must be false"
-grep -q '^JARINGANKU_VERSION=1.3.0-rc2$' .env.production.example || fail "JARINGANKU_VERSION mismatch"
+grep -q '^JARINGANKU_VERSION=1.3.0-rc3$' .env.production.example || fail "JARINGANKU_VERSION mismatch"
 grep -q '^RELEASE_CHANNEL=release-candidate$' .env.production.example || fail "RELEASE_CHANNEL mismatch"
 
 if git ls-files --error-unmatch .env.production >/dev/null 2>&1; then

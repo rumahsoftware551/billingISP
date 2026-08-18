@@ -71,6 +71,7 @@ services:
     restart: unless-stopped
     env_file: [.env.production]
     environment:
+      RADIUS_CLIENT_NETWORK: ${RADIUS_CLIENT_NETWORK:-disabled}
       DB_PASSWORD_FILE: /run/secrets/db_password
       RADIUS_SHARED_SECRET_FILE: /run/secrets/radius_shared_secret
     secrets: [db_password, radius_shared_secret]
@@ -139,15 +140,15 @@ services:
       - "${APP_BIND:-127.0.0.1}:${APP_PORT:-8080}:80"
     volumes:
       - storage:/var/www/html/storage:ro
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/up || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 30
-      start_period: 10s
     security_opt: ["no-new-privileges:true"]
     networks: [jaringanku]
 
+    healthcheck:
+      test: ["CMD-SHELL", "nginx -t >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
   backup:
     image: jaringanku-phase16-backup:prod
     build:
