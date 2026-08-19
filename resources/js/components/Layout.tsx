@@ -2,6 +2,7 @@ import React, {useMemo, useState} from 'react';
 import {Head, Link, usePage} from '@inertiajs/react';
 import {Activity, Boxes, Building2, ChevronDown, CircleDollarSign, ClipboardList, FileBarChart, Gauge, Globe2, Menu, Network, PanelsTopLeft, Search, Settings, ShieldCheck, TicketCheck, Users, UsersRound, WalletCards, X} from 'lucide-react';
 import {useAccess} from '../hooks/useAccess';
+import {isRoleMenuAllowed} from '../config/roleNavigation';
 
 type NavItem={name:string;href:string;icon:any;permission?:string};
 type NavGroup={label:string;items:NavItem[]};
@@ -32,7 +33,7 @@ export default function Layout({children}:{children:React.ReactNode}) {
       {name:'Inventory',href:'/inventory-management',icon:Boxes,permission:'inventory.view'},
       {name:'Laporan',href:'/reports',icon:FileBarChart,permission:'reports.view'},
     ]},
-  ].map(group=>({...group,items:group.items.filter(item=>can(item.permission))})).filter(group=>group.items.length>0);
+  ].map(group=>({...group,items:group.items.filter(item=>isRoleMenuAllowed(roleSlug,item.href)&&can(item.permission))})).filter(group=>group.items.length>0);
 
   if(systemAdmin && ['owner','admin'].includes(roleSlug)){groups.push({label:'Administrasi',items:[
     {name:'Integrasi',href:'/integrations',icon:Globe2},
