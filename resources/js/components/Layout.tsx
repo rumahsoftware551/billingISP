@@ -8,7 +8,7 @@ type NavGroup={label:string;items:NavItem[]};
 
 export default function Layout({children}:{children:React.ReactNode}) {
   const {props,url}:any=usePage();
-  const {can,systemAdmin,platformAdmin}=useAccess();
+  const {can,systemAdmin,platformAdmin,roleSlug}=useAccess();
   const [mobile,setMobile]=useState(false);
   const [search,setSearch]=useState('');
   const [profileOpen,setProfileOpen]=useState(false);
@@ -34,7 +34,7 @@ export default function Layout({children}:{children:React.ReactNode}) {
     ]},
   ].map(group=>({...group,items:group.items.filter(item=>can(item.permission))})).filter(group=>group.items.length>0);
 
-  if(systemAdmin){groups.push({label:'Administrasi',items:[
+  if(systemAdmin && ['owner','admin'].includes(roleSlug)){groups.push({label:'Administrasi',items:[
     {name:'Integrasi',href:'/integrations',icon:Globe2},
     {name:'Pengaturan',href:'/settings',icon:Settings},
     {name:'System',href:'/system',icon:PanelsTopLeft},
@@ -88,7 +88,7 @@ export default function Layout({children}:{children:React.ReactNode}) {
         </div>
 
         <div className="flex items-center gap-2">
-          <Link href="/access" className="hidden rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 sm:inline-flex">Akses Portal</Link>
+          {['owner','admin'].includes(roleSlug)&&<Link href="/access" className="hidden rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 sm:inline-flex">Akses Portal</Link>}
           <div className="relative">
             <button aria-expanded={profileOpen} onClick={()=>setProfileOpen(v=>!v)} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-1.5 pr-3 text-sm shadow-sm hover:bg-slate-50">
               <span className="grid h-8 w-8 place-items-center rounded-lg bg-slate-900 text-[11px] font-black text-white">{initials}</span>
