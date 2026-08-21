@@ -21,6 +21,8 @@ server default {
             ok = return
         }
         sql
+        expiration
+        logintime
         pap
     }
 
@@ -46,6 +48,10 @@ server default {
     accounting {
         detail
         unix
+        sql
+    }
+
+    session {
         sql
     }
 

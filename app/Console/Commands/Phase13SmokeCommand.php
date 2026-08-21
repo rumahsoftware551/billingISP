@@ -27,13 +27,14 @@ class Phase13SmokeCommand extends Command
         app()->instance(CurrentTenant::class,new CurrentTenant($tenant));
         $demo=PartnerAccount::query()->where('email','mitra@jaringanku.local')->first();
         if(!$demo && !filter_var(env('SEED_DEMO_DATA',false), FILTER_VALIDATE_BOOL)){$this->warn('SEED_DEMO_DATA=false; Phase 13 runtime smoke dilewati setelah preflight.');return self::SUCCESS;}
-        if(!$demo || !$demo->passwordMatches(env('PHASE13_PARTNER_PASSWORD','MitraDemo123!'))){$this->error('Demo Partner account/password belum valid.');return 2;}
+        $password=(string)env('PHASE13_PARTNER_PASSWORD','');
+        if($password==='' || !$demo || !$demo->passwordMatches($password)){$this->error('Demo Partner account/password belum valid.');return 2;}
 
         DB::beginTransaction();
         try{
             $suffix=Str::upper(Str::random(8));
             $partner=Partner::query()->create(['code'=>'SMOKE-'.$suffix,'name'=>'Phase 13 Smoke Partner','status'=>'active','payout_account'=>['bank'=>'TEST','account'=>'00013','holder'=>'Smoke Partner']]);
-            $account=PartnerAccount::query()->create(['partner_id'=>$partner->id,'name'=>'Smoke Owner','email'=>'smoke-'.$suffix.'@jaringanku.local','password'=>'SmokePartner123!','role'=>'owner','status'=>'active','must_change_password'=>false]);
+            $account=PartnerAccount::query()->create(['partner_id'=>$partner->id,'name'=>'Smoke Owner','email'=>'smoke-'.$suffix.'@jaringanku.local','password'=>Str::random(40),'role'=>'owner','status'=>'active','must_change_password'=>false]);
             $rule=PartnerCommissionRule::query()->create(['partner_id'=>$partner->id,'name'=>'Smoke 10%','type'=>'payment_percent','value'=>1000,'active'=>true]);
 
             $this->info('1/4 Memverifikasi partner/customer tenant scope...');
@@ -42,7 +43,7 @@ class Phase13SmokeCommand extends Command
 
             $this->info('2/4 Mem-post pembayaran dan memverifikasi attribution mitra...');
             $invoice=Invoice::query()->create(['customer_id'=>$customer->id,'invoice_number'=>'SMOKE-INV-'.$suffix,'billing_key'=>'smoke-partner-'.Str::uuid(),'period_start'=>now()->startOfMonth(),'period_end'=>now()->endOfMonth(),'issued_at'=>now()->toDateString(),'due_at'=>now()->addDays(7)->toDateString(),'subtotal'=>10000,'discount'=>0,'tax'=>0,'total'=>10000,'paid_amount'=>0,'balance_due'=>10000,'status'=>'unpaid']);
-            $payment=app(PaymentService::class)->postToInvoice($invoice,10000,'cash','PH13-SMOKE',now(),'Phase 13 partner smoke.',null,$partner->id,$account->id);
+            $payment=app(PaymentService::class)->postToInvoice($invoice,10000,'cash','PH13-SMOKE',now(),'Phase 13 partner smoke.',null,$partner->id,$account->id,'phase13-smoke:'.$invoice->id);
             if((int)$payment->partner_id!==(int)$partner->id || (int)$payment->partner_account_id!==(int)$account->id){$this->error('Payment attribution mitra gagal.');return 4;}
 
             $this->info('3/4 Memverifikasi commission ledger idempotent...');

@@ -1,14 +1,14 @@
 FROM node:22-bookworm-slim AS frontend
 WORKDIR /app
-COPY package.json ./
-RUN npm install --no-audit --no-fund
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
 COPY resources ./resources
 COPY vite.config.ts tsconfig.json ./
 RUN npm run build
 
 FROM composer:2 AS vendor
 WORKDIR /app
-COPY composer.json ./
+COPY composer.json composer.lock ./
 RUN composer install \
     --no-dev \
     --prefer-dist \
@@ -25,6 +25,7 @@ RUN apt-get update \
         libicu-dev \
         libzip-dev \
         libonig-dev \
+        libcurl4-openssl-dev \
         unzip \
         curl \
         freeradius-utils \
@@ -34,6 +35,7 @@ RUN apt-get update \
         pcntl \
         intl \
         zip \
+        curl \
         mbstring \
     && rm -rf /var/lib/apt/lists/*
 

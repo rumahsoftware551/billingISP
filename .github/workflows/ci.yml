@@ -1,0 +1,104 @@
+name: Jaringanku CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: jaringanku_test
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: jaringanku_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d jaringanku_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: curl, mbstring, pdo_pgsql
+          coverage: none
+
+      - name: Validate Composer metadata
+        run: composer validate --strict
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install frontend dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Audit PHP dependencies
+        run: COMPOSER_NO_AUDIT=0 composer audit --locked --no-interaction
+
+      - name: Audit frontend dependencies
+        run: npm audit --audit-level=high
+
+      - name: Verify release source manifest
+        run: sh ./scripts/verify-release.sh
+
+      - name: PHP syntax
+        run: find app bootstrap config database routes tests -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Migrate test database
+        run: php artisan migrate:fresh --force
+
+      - name: Run application tests
+        run: vendor/bin/phpunit --stop-on-failure --display-warnings --fail-on-warning
+
+      - name: Type-check frontend
+        run: npm run typecheck
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Build production application image
+        run: docker build -f docker/php/Dockerfile -t jaringanku-ci-app .
+
+      - name: Build production RADIUS image
+        run: docker build -f docker/radius/Dockerfile -t jaringanku-ci-radius .
+
+      - name: Validate shell scripts
+        run: find docker scripts -name '*.sh' -print0 | xargs -0 -n1 bash -n
+
+      - name: Save generated dependency lockfiles
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-lockfiles
+          path: |
+            composer.lock
+            package-lock.json
+          if-no-files-found: warn

@@ -116,20 +116,39 @@ Artisan::command('jaringanku:accounting-smoke {--leave-open : Leave the syntheti
 
 Artisan::command('jaringanku:radius-resync', function () {
     $projection = app(\App\Services\RadiusProjectionService::class);
-    $count = 0;
-    \App\Models\CustomerService::query()
-        ->where('status', 'active')
-        ->orderBy('id')
-        ->chunkById(100, function ($services) use ($projection, &$count) {
+    $count = 0; $failed = 0;
+    foreach (\App\Models\Tenant::query()->where('status', 'active')->orderBy('id')->get() as $tenant) {
+        app()->instance(\App\Support\CurrentTenant::class, new \App\Support\CurrentTenant($tenant));
+        \App\Models\CustomerService::query()->orderBy('id')->chunkById(100, function ($services) use ($projection, &$count, &$failed) {
             foreach ($services as $service) {
-                $projection->syncService($service);
-                $count++;
+                try {
+                    $projection->syncService($service);
+                    $count++;
+                } catch (\Throwable $e) {
+                    report($e); $failed++;
+                    $this->error('RADIUS resync gagal untuk service '.$service->id.': '.$e->getMessage());
+                }
             }
         });
+    }
 
-    $this->info("RADIUS projection resynced for {$count} active service(s).");
-    return 0;
-})->purpose('Rebuild radcheck/radreply projections for all active Jaringanku services.');
+    $this->info("RADIUS projection resynced={$count} failed={$failed}.");
+    return $failed === 0 ? 0 : 1;
+})->purpose('Reconcile radcheck/radreply projections for all tenant services.');
+
+Artisan::command('jaringanku:hotspot-reconcile {--all : Rebuild every sold/active voucher projection}', function () {
+    $activated = 0; $expired = 0; $failed = 0;
+    foreach (\App\Models\Tenant::query()->where('status', 'active')->orderBy('id')->get() as $tenant) {
+        app()->instance(\App\Support\CurrentTenant::class, new \App\Support\CurrentTenant($tenant));
+        $result = app(\App\Services\HotspotVoucherService::class)->reconcileCurrentTenant((bool) $this->option('all'));
+        $activated += $result['activated'];
+        $expired += $result['expired'];
+        $failed += $result['failed'];
+    }
+
+    $this->info("Hotspot voucher activated={$activated} expired={$expired} failed={$failed}.");
+    return $failed === 0 ? 0 : 1;
+})->purpose('Activate vouchers from accounting, expire old vouchers, and reconcile RADIUS.');
 
 Artisan::command('jaringanku:billing-run {period? : Billing period in YYYY-MM} {--tenant= : Optional tenant slug}', function () {
     $periodArg = $this->argument('period') ?: now()->format('Y-m');
@@ -570,7 +589,7 @@ Artisan::command('jaringanku:phase08-smoke', function () {
         ['name' => '__phase08_smoke__'],
         [
             'url' => config('jaringanku.phase08_smoke_webhook_url', 'http://nginx/api/phase8-smoke/webhook'),
-            'secret' => 'phase08-smoke-secret-'.\Illuminate\Support\Str::random(24),
+            'secret' => \Illuminate\Support\Str::random(48),
             'events' => ['phase08.smoke'],
             'enabled' => true,
             'timeout_seconds' => 5,
@@ -755,8 +774,9 @@ Artisan::command('jaringanku:phase10-smoke', function () {
     if (! $customer) { $this->warn('Demo customer tidak ditemukan; Phase 10 smoke dilewati karena demo data disabled.'); return 0; }
     $account = \App\Models\CustomerPortalAccount::query()->where('tenant_id',$tenant->id)->where('customer_id',$customer->id)->first();
     if (! $account) { $this->error('Customer portal account demo tidak ditemukan.'); return 2; }
-    $probe = new \App\Models\CustomerPortalAccount(['password' => \Illuminate\Support\Facades\Hash::make('Phase10SmokePassword!')]);
-    if (! $probe->passwordMatches('Phase10SmokePassword!')) { $this->error('Portal password hashing/check gagal.'); return 3; }
+    $probePassword = \Illuminate\Support\Str::random(40);
+    $probe = new \App\Models\CustomerPortalAccount(['password' => \Illuminate\Support\Facades\Hash::make($probePassword)]);
+    if (! $probe->passwordMatches($probePassword)) { $this->error('Portal password hashing/check gagal.'); return 3; }
 
     $this->info('1/4 Memverifikasi tenant/customer scope portal...');
     $foreign = \App\Models\Invoice::query()->withoutGlobalScopes()->where('tenant_id','!=',$tenant->id)->where('customer_id',$customer->id)->exists();
@@ -812,6 +832,9 @@ Artisan::command('jaringanku:phase10-smoke', function () {
 
 \Illuminate\Support\Facades\Schedule::command('jaringanku:billing-refresh')->dailyAt('00:10')->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('jaringanku:automation-run')->everyTenMinutes()->withoutOverlapping();
+\Illuminate\Support\Facades\Schedule::command('jaringanku:radius-resync')->everyFiveMinutes()->withoutOverlapping();
+\Illuminate\Support\Facades\Schedule::command('jaringanku:hotspot-reconcile')->everyMinute()->withoutOverlapping(10);
+\Illuminate\Support\Facades\Schedule::command('jaringanku:hotspot-reconcile --all')->dailyAt('02:40')->withoutOverlapping(120);
 \Illuminate\Support\Facades\Schedule::command('jaringanku:payment-expire')->everyFiveMinutes()->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('jaringanku:payment-reminders')->dailyAt('09:00')->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::call(function () { \Illuminate\Support\Facades\Cache::put('jaringanku:scheduler_heartbeat', now()->toIso8601String(), now()->addMinutes(5)); })->name('jaringanku-scheduler-heartbeat')->everyMinute()->withoutOverlapping();

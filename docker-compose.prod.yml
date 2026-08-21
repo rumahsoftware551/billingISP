@@ -42,7 +42,7 @@ services:
     restart: unless-stopped
     env_file: [.env.production]
     environment:
-      RUN_MIGRATIONS: "true"
+      RUN_MIGRATIONS: "false"
       APP_KEY_FILE: /run/secrets/app_key
       DB_PASSWORD_FILE: /run/secrets/db_password
       RADIUS_SHARED_SECRET_FILE: /run/secrets/radius_shared_secret
@@ -162,6 +162,7 @@ services:
       postgres: {condition: service_healthy}
     volumes:
       - backups:/backups
+      - storage:/storage:ro
     security_opt: ["no-new-privileges:true"]
     networks: [jaringanku]
 

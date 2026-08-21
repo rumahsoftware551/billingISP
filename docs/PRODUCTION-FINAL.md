@@ -7,11 +7,11 @@ Sebelum go-live:
 3. Isi `.env.production` dengan hostname HTTPS nyata, email admin, trusted proxy, serta CIDR/IP MikroTik.
 4. Simpan `secrets/*.txt` dengan permission 0600 dan backup offline terenkripsi.
 5. Pastikan `SEED_DEMO_DATA=false`, `APP_DEBUG=false`, `FORCE_HTTPS=true`, dan secure session aktif.
-6. Jalankan `./scripts/prod-up.sh`.
+6. Deploy pertama: jalankan `BOOTSTRAP_PRODUCTION=true ./scripts/prod-up.sh`. Update berikutnya: `./scripts/prod-up.sh`.
 7. Jalankan `./scripts/prod-final-check.sh`.
 8. Verifikasi RADIUS authentication/accounting dari MikroTik nyata.
 9. Verifikasi satu invoice, pembayaran sandbox/production, notifikasi, dan Customer Portal.
-10. Jalankan backup manual dan verifikasi SHA-256 sebelum menerima traffic production.
+10. Jalankan backup manual database + `storage/app`, verifikasi SHA-256, lalu lakukan restore drill pada environment non-production sebelum menerima traffic production.
 
 ## Rollback aplikasi
 

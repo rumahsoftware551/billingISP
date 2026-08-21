@@ -33,6 +33,7 @@ use App\Http\Controllers\Network\PlanController;
 use App\Http\Controllers\Network\RadiusTestController;
 use App\Http\Controllers\Network\RouterController;
 use App\Http\Controllers\Network\SessionController;
+use App\Http\Controllers\Network\HotspotVoucherController;
 use App\Http\Controllers\Operations\AutomationController;
 use App\Http\Controllers\Reports\ReportsController;
 use App\Http\Controllers\System\HealthController;
@@ -76,7 +77,7 @@ Route::prefix('/portal/{tenantSlug}')->group(function () {
     Route::get('/login', [PortalAuthController::class, 'create'])->name('portal.login');
     Route::post('/login', [PortalAuthController::class, 'store'])->middleware('throttle:30,1')->name('portal.login.store');
 
-    Route::middleware('portal.auth')->group(function () {
+    Route::middleware(['portal.auth', 'tenant.bound'])->group(function () {
         Route::get('/dashboard', PortalDashboardController::class)->name('portal.dashboard');
         Route::post('/logout', [PortalAuthController::class, 'destroy'])->name('portal.logout');
         Route::get('/profile', [PortalProfileController::class, 'show'])->name('portal.profile');
@@ -100,7 +101,7 @@ Route::get('/mitra/tenant/login', fn () => redirect('/access?portal=partner'))->
 Route::prefix('/mitra/{tenantSlug}')->group(function () {
     Route::get('/login', [PartnerAuthController::class, 'create'])->name('partner.login');
     Route::post('/login', [PartnerAuthController::class, 'store'])->middleware('throttle:30,1')->name('partner.login.store');
-    Route::middleware('partner.auth')->group(function () {
+    Route::middleware(['partner.auth', 'tenant.bound'])->group(function () {
         Route::get('/dashboard', PartnerDashboardController::class)->name('partner.dashboard');
         Route::post('/logout', [PartnerAuthController::class, 'destroy'])->name('partner.logout');
         Route::get('/customers', [PartnerCustomerController::class, 'index'])->name('partner.customers.index');
@@ -120,7 +121,7 @@ Route::get('/inventory/tenant/login', fn () => redirect('/access?portal=inventor
 Route::prefix('/inventory/{tenantSlug}')->group(function () {
     Route::get('/login', [InventoryAuthController::class, 'create'])->name('inventory.login');
     Route::post('/login', [InventoryAuthController::class, 'store'])->middleware('throttle:30,1')->name('inventory.login.store');
-    Route::middleware('inventory.auth')->group(function () {
+    Route::middleware(['inventory.auth', 'tenant.bound'])->group(function () {
         Route::get('/dashboard', InventoryDashboardController::class)->name('inventory.dashboard');
         Route::post('/logout', [InventoryAuthController::class, 'destroy'])->name('inventory.logout');
         Route::put('/password', [InventoryAuthController::class, 'password'])->name('inventory.password');
@@ -153,7 +154,7 @@ Route::middleware(['auth', 'platform-admin'])->prefix('platform')->group(functio
     Route::post('/release/audit', [ReleaseCenterController::class, 'audit'])->name('platform.release.audit');
 });
 
-Route::middleware(['auth', 'tenant', 'subscription'])->group(function () {
+Route::middleware(['auth', 'tenant', 'tenant.bound', 'subscription'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->middleware('permission:dashboard.view')->name('dashboard');
 
     Route::middleware('system-admin')->group(function () {
@@ -224,6 +225,14 @@ Route::middleware(['auth', 'tenant', 'subscription'])->group(function () {
     Route::get('/network/sessions', [SessionController::class, 'index'])->middleware('permission:network.view')->name('network.sessions.index');
     Route::post('/network/sessions/{session}/disconnect', [SessionController::class, 'disconnect'])->middleware('permission:network.manage')->name('network.sessions.disconnect');
     Route::post('/network/sessions/{session}/coa', [SessionController::class, 'coa'])->middleware('permission:network.manage')->name('network.sessions.coa');
+
+    Route::get('/hotspot', [HotspotVoucherController::class, 'index'])->middleware('permission:network.view')->name('hotspot.index');
+    Route::post('/hotspot/profiles', [HotspotVoucherController::class, 'storeProfile'])->middleware('permission:network.manage')->name('hotspot.profiles.store');
+    Route::post('/hotspot/batches', [HotspotVoucherController::class, 'storeBatch'])->middleware('permission:network.manage')->name('hotspot.batches.store');
+    Route::get('/hotspot/batches/{batch}/export', [HotspotVoucherController::class, 'export'])->middleware('permission:network.manage')->name('hotspot.batches.export');
+    Route::post('/hotspot/vouchers/{voucher}/sell', [HotspotVoucherController::class, 'sell'])->middleware('permission:network.manage')->name('hotspot.vouchers.sell');
+    Route::post('/hotspot/vouchers/{voucher}/disable', [HotspotVoucherController::class, 'disable'])->middleware('permission:network.manage')->name('hotspot.vouchers.disable');
+    Route::post('/hotspot/vouchers/{voucher}/enable', [HotspotVoucherController::class, 'enable'])->middleware('permission:network.manage')->name('hotspot.vouchers.enable');
 
     Route::get('/billing', [BillingController::class, 'index'])->middleware('permission:billing.view')->name('billing.index');
     Route::post('/billing/run', [BillingController::class, 'run'])->middleware('permission:billing.manage')->name('billing.run');

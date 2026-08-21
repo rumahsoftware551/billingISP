@@ -17,6 +17,7 @@ app_url=$(read_env APP_URL)
 force_https=$(read_env FORCE_HTTPS)
 secure_cookie=$(read_env SESSION_SECURE_COOKIE)
 radius_client=$(read_env RADIUS_CLIENT_NETWORK)
+router_cidrs=$(read_env MIKROTIK_ALLOWED_CIDRS)
 admin_email=$(read_env SEED_ADMIN_EMAIL)
 
 [ "$app_env" = "production" ] || { echo 'APP_ENV must be production.' >&2; exit 1; }
@@ -36,6 +37,10 @@ case "$radius_client" in
     echo 'WARNING: RADIUS_CLIENT_NETWORK is not configured for a real NAS/MikroTik yet.' >&2
     ;;
 esac
+case "$router_cidrs" in
+  ''|CHANGE_ME*) echo 'MIKROTIK_ALLOWED_CIDRS must contain exact RouterOS v7 management CIDRs, or disabled when REST is unused.' >&2; exit 1 ;;
+  disabled) echo 'WARNING: MikroTik REST integration is disabled; RouterOS v6/v7 can still authenticate through RADIUS.' >&2 ;;
+esac
 case "$admin_email" in
   *@example.com|'') echo 'WARNING: SEED_ADMIN_EMAIL still looks like a placeholder.' >&2 ;;
 esac
@@ -45,8 +50,11 @@ COMPOSE="docker compose --env-file .env.production -f docker-compose.prod.yml"
 $COMPOSE config --quiet
 $COMPOSE build app nginx radius backup
 $COMPOSE up -d postgres redis
+$COMPOSE run --rm --no-deps -e RUN_MIGRATIONS=false app jaringanku-cli php artisan migrate --force
 $COMPOSE up -d app radius queue scheduler nginx backup
-$COMPOSE exec -T app jaringanku-cli php artisan db:seed --force
+if [ "${BOOTSTRAP_PRODUCTION:-false}" = "true" ]; then
+  $COMPOSE exec -T app jaringanku-cli php artisan db:seed --force
+fi
 $COMPOSE exec -T app jaringanku-cli php artisan jaringanku:production-preflight
 $COMPOSE exec -T app jaringanku-cli php artisan jaringanku:phase12-preflight
 $COMPOSE exec -T app jaringanku-cli php artisan jaringanku:phase13-preflight

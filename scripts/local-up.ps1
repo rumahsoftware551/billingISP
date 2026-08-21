@@ -125,6 +125,26 @@ if ([string]::IsNullOrWhiteSpace($currentKey) -or $currentKey -match '^base64:A{
     [System.IO.File]::WriteAllText((Resolve-Path ".env"), $envContent, $utf8)
 }
 
+$envContent = Get-Content ".env" -Raw
+foreach ($secretName in @(
+    'DB_PASSWORD','SEED_ADMIN_PASSWORD','PHASE3_DEMO_PPPOE_PASSWORD',
+    'RADIUS_SHARED_SECRET','RADIUS_TEST_PASSWORD','PHASE10_PORTAL_PASSWORD',
+    'PHASE8_SMOKE_TOKEN','HEALTH_TOKEN','PHASE13_PARTNER_PASSWORD','PHASE14_INVENTORY_PASSWORD'
+)) {
+    $secretMatch = [regex]::Match($envContent, "(?m)^$secretName=(.*)$")
+    $secretValue = if ($secretMatch.Success) { $secretMatch.Groups[1].Value.Trim() } else { "" }
+    if ([string]::IsNullOrWhiteSpace($secretValue) -or $secretValue -match '^(CHANGE_ME|DISABLED)$') {
+        $secretBytes = New-Object byte[] 24
+        $secretRng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+        try { $secretRng.GetBytes($secretBytes) } finally { $secretRng.Dispose() }
+        $generatedSecret = "local-" + [Convert]::ToBase64String($secretBytes).TrimEnd('=')
+        if ($secretMatch.Success) { $envContent = [regex]::Replace($envContent, "(?m)^$secretName=.*$", "$secretName=$generatedSecret") }
+        else { $envContent += "`r`n$secretName=$generatedSecret" }
+    }
+}
+$utf8 = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText((Resolve-Path ".env"), $envContent, $utf8)
+
 Step "Menghentikan container Phase 01-15 lama tanpa menghapus volume"
 foreach ($oldProject in @('jaringanku-phase01','jaringanku-phase02','jaringanku-phase03','jaringanku-phase04','jaringanku-phase05','jaringanku-phase06','jaringanku-phase07','jaringanku-phase08','jaringanku-phase09','jaringanku-phase10','jaringanku-phase11','jaringanku-phase12','jaringanku-phase13','jaringanku-phase14','jaringanku-phase15')) {
     $oldIds = docker ps -aq --filter "label=com.docker.compose.project=$oldProject"
@@ -239,7 +259,7 @@ $radiusSecret = ([regex]::Match($envRaw, '(?m)^RADIUS_SHARED_SECRET=(.*)$')).Gro
 $seedDemo = ([regex]::Match($envRaw, '(?m)^SEED_DEMO_DATA=(.*)$')).Groups[1].Value.Trim()
 $tenantSlug = ([regex]::Match($envRaw, '(?m)^SEED_TENANT_SLUG=(.*)$')).Groups[1].Value.Trim()
 if (-not $tenantSlug) { $tenantSlug = 'demo-isp' }
-if (-not $demoPassword) { $demoPassword = 'Phase3Demo123!' }
+if (-not $demoPassword) { throw 'PHASE3_DEMO_PPPOE_PASSWORD kosong di .env.' }
 if (-not $radiusSecret) { throw 'RADIUS_SHARED_SECRET kosong di .env.' }
 if ($seedDemo -match '^(?i:true|1|yes)$') {
     $radiusTest = docker compose exec -T app radtest phase3-demo $demoPassword radius 0 $radiusSecret 2>&1
@@ -469,9 +489,10 @@ Write-Host "Portal    : http://localhost:$appPort/portal/$tenantSlug/login"
 Write-Host "Health    : .\scripts\health.ps1"
 if ($seedDemo -match '^(?i:true|1|yes)$') {
     Write-Host "`nDemo local (SEED_DEMO_DATA=true):" -ForegroundColor DarkGray
-    Write-Host "  Admin     : admin@jaringanku.local / Jaringanku123!"
-    Write-Host "  Customer  : demo@jaringanku.local / PortalDemo123!"
-    Write-Host "  Mitra     : mitra@jaringanku.local / MitraDemo123!"
-    Write-Host "  Inventory : inventory@jaringanku.local / InventoryDemo123!"
-    Write-Host "  PPPoE     : phase3-demo / Phase3Demo123!"
+    Write-Host "  Admin     : admin@jaringanku.local"
+    Write-Host "  Customer  : demo@jaringanku.local"
+    Write-Host "  Mitra     : mitra@jaringanku.local"
+    Write-Host "  Inventory : inventory@jaringanku.local"
+    Write-Host "  PPPoE     : phase3-demo"
+    Write-Host "  Password acak tersimpan hanya di file .env lokal." -ForegroundColor Yellow
 }

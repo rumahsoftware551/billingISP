@@ -27,17 +27,22 @@ mkdir -p /backups
 
 while true; do
   stamp=$(date -u +%Y%m%dT%H%M%SZ)
-  target="/backups/jaringanku-${stamp}.dump"
-  temp="${target}.tmp"
-  echo "[$(date -u +%FT%TZ)] Starting PostgreSQL backup to ${target}"
-  if pg_dump -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USERNAME" -d "$DB_DATABASE" -Fc -f "$temp"; then
-    mv "$temp" "$target"
-    sha256sum "$target" > "${target}.sha256"
-    echo "[$(date -u +%FT%TZ)] Backup complete: ${target}"
+  database_target="/backups/jaringanku-${stamp}.dump"
+  storage_target="/backups/jaringanku-storage-${stamp}.tar.gz"
+  checksum_target="/backups/jaringanku-${stamp}.sha256"
+  database_temp="${database_target}.tmp"
+  storage_temp="${storage_target}.tmp"
+  echo "[$(date -u +%FT%TZ)] Starting PostgreSQL and storage backup (${stamp})"
+  if pg_dump -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USERNAME" -d "$DB_DATABASE" -Fc -f "$database_temp" \
+    && tar -C /storage -czf "$storage_temp" app; then
+    mv "$database_temp" "$database_target"
+    mv "$storage_temp" "$storage_target"
+    sha256sum "$database_target" "$storage_target" > "$checksum_target"
+    echo "[$(date -u +%FT%TZ)] Backup complete: ${database_target} + ${storage_target}"
   else
-    rm -f "$temp"
+    rm -f "$database_temp" "$storage_temp"
     echo "[$(date -u +%FT%TZ)] Backup failed" >&2
   fi
-  find /backups -type f \( -name 'jaringanku-*.dump' -o -name 'jaringanku-*.dump.sha256' \) -mtime "+$RETENTION" -delete || true
+  find /backups -type f \( -name 'jaringanku-*.dump' -o -name 'jaringanku-storage-*.tar.gz' -o -name 'jaringanku-*.sha256' \) -mtime "+$RETENTION" -delete || true
   sleep "$INTERVAL"
 done

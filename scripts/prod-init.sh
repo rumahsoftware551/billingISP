@@ -22,4 +22,5 @@ chmod 600 secrets/*.txt
 echo "Production files initialized."
 echo "1) Edit .env.production (APP_URL, TRUSTED_PROXIES, RADIUS_CLIENT_NETWORK, mail)."
 echo "2) Keep secrets/*.txt chmod 600 and never commit them."
-echo "3) Run: ./scripts/prod-up.sh"
+echo "3) First deploy: BOOTSTRAP_PRODUCTION=true ./scripts/prod-up.sh"
+echo "4) Later updates: ./scripts/prod-up.sh"

@@ -62,7 +62,9 @@ class PaymentGatewayNotificationService
                 return ['ok' => false, 'http' => 422, 'message' => 'Gross amount mismatch'];
             }
             $mapped = $this->mapMidtransStatus($payload);
-            if ($transaction->status === 'paid' || $transaction->payment_id) {
+            if ($transaction->status === 'reconciliation_required') {
+                $mapped = 'reconciliation_required';
+            } elseif ($transaction->status === 'paid' || $transaction->payment_id) {
                 $mapped = 'paid';
             } elseif (in_array($transaction->status, ['expired','cancelled','failed'], true) && $mapped === 'pending') {
                 $mapped = $transaction->status;
@@ -87,7 +89,25 @@ class PaymentGatewayNotificationService
                     ->first();
 
                 if (! $payment) {
-                    $amount = min((int) $transaction->amount, (int) $invoice->balance_due);
+                    $amount = (int) $transaction->amount;
+                    if ((int) $invoice->balance_due < $amount) {
+                        $updates['status'] = 'reconciliation_required';
+                        $updates['paid_at'] = now();
+                        $transaction->forceFill($updates)->save();
+                        $event->forceFill([
+                            'status' => 'processed',
+                            'processed_at' => now(),
+                            'error' => 'Settlement requires reconciliation: invoice balance changed before callback.',
+                        ])->save();
+
+                        return [
+                            'ok' => true,
+                            'duplicate' => false,
+                            'status' => 'reconciliation_required',
+                            'requires_reconciliation' => true,
+                        ];
+                    }
+
                     if ($amount > 0) {
                         $payment = $this->payments->postToInvoice(
                             $invoice,
@@ -97,9 +117,31 @@ class PaymentGatewayNotificationService
                             now(),
                             'Payment gateway Midtrans: '.$transaction->order_id,
                             null,
+                            idempotencyKey: 'gateway:'.$transaction->order_id,
                         );
-                        $this->notifications->paymentReceived($invoice->fresh(['customer']), $payment);
+                        if (! $payment->getAttribute('idempotent_replay')) {
+                            $this->notifications->paymentReceived($invoice->fresh(['customer']), $payment);
+                        }
                     }
+                }
+
+                if ($payment && (int) $payment->amount !== (int) $transaction->amount) {
+                    $updates['status'] = 'reconciliation_required';
+                    $updates['payment_id'] = $payment->id;
+                    $updates['paid_at'] = $payment->paid_at ?: now();
+                    $transaction->forceFill($updates)->save();
+                    $event->forceFill([
+                        'status' => 'processed',
+                        'processed_at' => now(),
+                        'error' => 'Legacy partial settlement requires reconciliation.',
+                    ])->save();
+
+                    return [
+                        'ok' => true,
+                        'duplicate' => false,
+                        'status' => 'reconciliation_required',
+                        'requires_reconciliation' => true,
+                    ];
                 }
 
                 if ($payment) {
@@ -110,7 +152,7 @@ class PaymentGatewayNotificationService
 
             $transaction->forceFill($updates)->save();
             $event->forceFill(['status' => 'processed', 'processed_at' => now(), 'error' => null])->save();
-            return ['ok' => true, 'duplicate' => false, 'status' => $mapped];
+            return ['ok' => true, 'duplicate' => false, 'status' => $updates['status']];
         });
     }
 
@@ -130,10 +172,22 @@ class PaymentGatewayNotificationService
                 ->latest('id')
                 ->first();
             if (! $payment) {
-                $amount = min((int) $transaction->amount, (int) $invoice->balance_due);
+                $amount = (int) $transaction->amount;
+                if ((int) $invoice->balance_due < $amount) {
+                    return tap($transaction, function (PaymentGatewayTransaction $transaction): void {
+                        $transaction->forceFill([
+                            'status' => 'reconciliation_required',
+                            'paid_at' => now(),
+                            'verified_at' => now(),
+                            'status_response' => ['transaction_status' => 'settlement', 'status_code' => '200', 'mock' => true, 'reconciliation_required' => true],
+                        ])->save();
+                    })->fresh();
+                }
                 if ($amount > 0) {
-                    $payment = $this->payments->postToInvoice($invoice, $amount, 'qris', $transaction->order_id, now(), 'Mock gateway payment Phase 09.', null);
-                    $this->notifications->paymentReceived($invoice->fresh(['customer']), $payment);
+                    $payment = $this->payments->postToInvoice($invoice, $amount, 'qris', $transaction->order_id, now(), 'Mock gateway payment Phase 09.', null, idempotencyKey: 'gateway:'.$transaction->order_id);
+                    if (! $payment->getAttribute('idempotent_replay')) {
+                        $this->notifications->paymentReceived($invoice->fresh(['customer']), $payment);
+                    }
                 }
             }
             $transaction->forceFill([

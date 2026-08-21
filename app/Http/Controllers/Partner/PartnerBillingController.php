@@ -22,9 +22,9 @@ class PartnerBillingController extends Controller {
         $a=$request->attributes->get('partner_account');
         abort_unless(in_array($a->role,['owner','admin','collector'],true),403);
         abort_unless((int)$invoice->customer()->value('partner_id')===(int)$a->partner_id,404);
-        $data=$request->validate(['amount'=>['required','integer','min:1'],'method'=>['required',Rule::in(['cash','transfer','qris','other'])],'reference'=>['nullable','string','max:160'],'notes'=>['nullable','string','max:1000']]);
-        $payment=$payments->postToInvoice($invoice,(int)$data['amount'],$data['method'],$data['reference']??null,now(),$data['notes']??'Pembayaran diterima Portal Mitra',null,$a->partner_id,$a->id);
-        $notifications->paymentReceived($invoice->fresh(['customer']),$payment);
-        return back()->with('success','Pembayaran '.$payment->payment_number.' berhasil diposting.');
+        $data=$request->validate(['amount'=>['required','integer','min:1'],'method'=>['required',Rule::in(['cash','transfer','qris','other'])],'reference'=>['nullable','string','max:160'],'notes'=>['nullable','string','max:1000'],'idempotency_key'=>['required','uuid']]);
+        $payment=$payments->postToInvoice($invoice,(int)$data['amount'],$data['method'],$data['reference']??null,now(),$data['notes']??'Pembayaran diterima Portal Mitra',null,$a->partner_id,$a->id,$data['idempotency_key']);
+        if(!$payment->getAttribute('idempotent_replay')) $notifications->paymentReceived($invoice->fresh(['customer']),$payment);
+        return back()->with('success',$payment->getAttribute('idempotent_replay')?'Permintaan ini sudah diproses sebagai pembayaran '.$payment->payment_number.'.':'Pembayaran '.$payment->payment_number.' berhasil diposting.');
     }
 }

@@ -23,6 +23,9 @@ APP_BIND=127.0.0.1
 APP_PORT=8080
 TRUSTED_PROXIES=*
 RADIUS_CLIENT_NETWORK=<mikrotik-ip>/32
+MIKROTIK_ALLOWED_CIDRS=<mikrotik-ip>/32
+MIKROTIK_ALLOWED_REST_PORTS=443
+MIKROTIK_ALLOW_INSECURE_TLS=false
 SEED_ADMIN_EMAIL=<admin-email>
 MAIL_MAILER=log
 ```
@@ -43,11 +46,18 @@ X-Forwarded-For
 
 Do not expose PHP-FPM, PostgreSQL or Redis to the Internet.
 
-## 4. Start
+
+Koneksi REST MikroTik production hanya menerima IP literal yang berada di `MIKROTIK_ALLOWED_CIDRS`. Gunakan sertifikat TLS yang dipercaya. Jika perangkat lama benar-benar memerlukan TLS tanpa verifikasi, aktifkan `MIKROTIK_ALLOW_INSECURE_TLS=true` hanya pada jaringan VPN/management yang sempit dan terdokumentasi.
+
+Scheduler merekonsiliasi proyeksi RADIUS seluruh layanan setiap lima menit. Kegagalan per layanan dicatat dan membuat command gagal agar monitoring dapat memberi alert; putaran berikutnya akan mencoba ulang.
+
+## 4. Start pertama kali
 
 ```bash
-./scripts/prod-up.sh
+BOOTSTRAP_PRODUCTION=true ./scripts/prod-up.sh
 ```
+
+Flag bootstrap menjalankan seeder produksi satu kali. Deploy/update berikutnya cukup memakai `./scripts/prod-up.sh`, sehingga konfigurasi role dan template yang telah diubah operator tidak ditimpa seeder.
 
 Then inspect:
 
@@ -56,9 +66,9 @@ docker compose --env-file .env.production -f docker-compose.prod.yml ps
 docker compose --env-file .env.production -f docker-compose.prod.yml logs --tail=100 app radius queue scheduler nginx backup
 ```
 
-## 5. Initial seed
+## 5. Initial seed manual (opsional)
 
-The production seeder is idempotent and `SEED_DEMO_DATA=false` prevents demo PPPoE data. Run once after verifying your `SEED_ADMIN_*` values:
+Jika stack sudah pernah dinyalakan tanpa flag bootstrap, jalankan seeder produksi satu kali setelah memverifikasi nilai `SEED_ADMIN_*`. `SEED_DEMO_DATA=false` mencegah data PPPoE demo:
 
 ```bash
 docker compose --env-file .env.production -f docker-compose.prod.yml exec -T app jaringanku-cli php artisan db:seed --force
@@ -80,7 +90,7 @@ Configure tenant credentials from `/integrations`. Do not enable local `mock` pa
 
 ## 6. Backup
 
-Automatic backup service runs continuously. Manual backup:
+Automatic backup service runs continuously. Setiap backup berisi dump PostgreSQL, arsip `storage/app` untuk bukti bayar/logo/QR, dan satu manifest SHA-256. Manual backup:
 
 ```bash
 ./scripts/prod-backup.sh
@@ -91,12 +101,14 @@ Automatic backup service runs continuously. Manual backup:
 Restore is destructive and intentionally requires typing `RESTORE`:
 
 ```bash
-./scripts/prod-restore.sh backups/jaringanku-manual-YYYYMMDDTHHMMSSZ.dump
+./scripts/prod-restore.sh \
+  backups/jaringanku-manual-YYYYMMDDTHHMMSSZ.dump \
+  backups/jaringanku-storage-manual-YYYYMMDDTHHMMSSZ.tar.gz
 ```
 
 ## 8. Deploy update
 
-Before an update, create a backup. Then build/up. Laravel's production entrypoint runs migrations and `php artisan optimize`. Queue workers are recycled using `php artisan queue:restart` from `prod-up.sh`.
+Before an update, create a backup. `prod-up.sh` menjalankan migration sebagai langkah satu-kali sebelum semua service aplikasi dimulai; entrypoint app/queue/scheduler tidak menjalankan migration. Queue workers are recycled using `php artisan queue:restart` from `prod-up.sh`.
 
 ## 9. Firewall
 
