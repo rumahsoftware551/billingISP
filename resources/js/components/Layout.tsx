@@ -2,7 +2,7 @@ import React, {useMemo, useState} from 'react';
 import {Head, Link, usePage} from '@inertiajs/react';
 import {Activity, Boxes, Building2, ChevronDown, CircleDollarSign, ClipboardList, CreditCard, FileBarChart, Gauge, Globe2, Menu, Network, PackageSearch, PanelsTopLeft, Settings, ShieldCheck, TicketCheck, Users, UsersRound, WalletCards, X} from 'lucide-react';
 
-type NavItem={name:string,href:string,icon:any,permission?:string};
+type NavItem={name:string,href:string,icon:any,permission?:string,section?:string};
 
 export default function Layout({children}:{children:React.ReactNode}) {
   const {props,url}:any=usePage();
@@ -12,17 +12,17 @@ export default function Layout({children}:{children:React.ReactNode}) {
   const permissions:string[]=props.access?.permissions||[];
   const can=(permission?:string)=>!permission||permissions.includes('*')||permissions.includes(permission)||props.auth?.user?.is_platform_admin;
   const nav:NavItem[]=[
-    {name:'Dashboard',href:'/dashboard',icon:Gauge,permission:'dashboard.view'},
-    {name:'Pelanggan',href:'/customers',icon:Users,permission:'customers.view'},
-    {name:'Billing & Pembayaran',href:'/billing',icon:CircleDollarSign,permission:'billing.view'},
-    {name:'Bukti Pembayaran',href:'/billing/manual-payments',icon:WalletCards,permission:'billing.view'},
-    {name:'Jaringan & RADIUS',href:'/network',icon:Network,permission:'network.view'},
-    {name:'Sesi Online',href:'/network/sessions',icon:Activity,permission:'network.view'},
-    {name:'Mitra / Reseller',href:'/partners',icon:UsersRound,permission:'partners.view'},
-    {name:'Inventory',href:'/inventory-management',icon:Boxes,permission:'inventory.view'},
-    {name:'Automation & Isolir',href:'/operations',icon:ShieldCheck,permission:'operations.view'},
-    {name:'Teknisi, Tiket & WO',href:'/field-operations',icon:TicketCheck,permission:'field_ops.view'},
-    {name:'Laporan',href:'/reports',icon:FileBarChart,permission:'reports.view'},
+    {name:'Dashboard',href:'/dashboard',icon:Gauge,permission:'dashboard.view',section:'Operasional'},
+    {name:'Pelanggan',href:'/customers',icon:Users,permission:'customers.view',section:'Operasional'},
+    {name:'Billing & Pembayaran',href:'/billing',icon:CircleDollarSign,permission:'billing.view',section:'Keuangan'},
+    {name:'Bukti Pembayaran',href:'/billing/manual-payments',icon:WalletCards,permission:'billing.view',section:'Keuangan'},
+    {name:'Laporan',href:'/reports',icon:FileBarChart,permission:'reports.view',section:'Keuangan'},
+    {name:'Jaringan & RADIUS',href:'/network',icon:Network,permission:'network.view',section:'NOC & Jaringan'},
+    {name:'Sesi Online',href:'/network/sessions',icon:Activity,permission:'network.view',section:'NOC & Jaringan'},
+    {name:'Automation & Isolir',href:'/operations',icon:ShieldCheck,permission:'operations.view',section:'NOC & Jaringan'},
+    {name:'Teknisi, Tiket & WO',href:'/field-operations',icon:TicketCheck,permission:'field_ops.view',section:'NOC & Jaringan'},
+    {name:'Mitra / Reseller',href:'/partners',icon:UsersRound,permission:'partners.view',section:'Pendukung'},
+    {name:'Inventory',href:'/inventory-management',icon:Boxes,permission:'inventory.view',section:'Pendukung'},
   ].filter(x=>can(x.permission));
   if(props.auth?.system_admin) nav.push({name:'Integrasi',href:'/integrations',icon:Globe2});
   if(props.auth?.system_admin) nav.push({name:'Pengaturan',href:'/settings',icon:Settings});
@@ -40,7 +40,7 @@ export default function Layout({children}:{children:React.ReactNode}) {
         <div className="min-w-0"><div className="truncate font-extrabold tracking-tight text-white">{branding.app_name||'Jaringanku'}</div><div className="truncate text-[10px] uppercase tracking-[.16em] text-slate-400">ISP Management</div></div>
         <button className="ml-auto md:hidden" onClick={()=>setMobile(false)}><X size={20}/></button>
       </div>
-      <nav className="jk-nav px-3 py-4">{nav.map(item=>{const I=item.icon;return <Link key={item.href} href={item.href} onClick={()=>setMobile(false)} className={`jk-nav-link ${active(item.href)?'active':''}`}><I size={18}/><span>{item.name}</span></Link>})}</nav>
+      <nav className="jk-nav px-3 py-4">{nav.map((item,index)=>{const I=item.icon;const showSection=index===0||nav[index-1].section!==item.section;return <React.Fragment key={item.href}>{showSection&&<div className="px-3 pb-2 pt-4 text-[10px] font-bold uppercase tracking-[.14em] text-slate-500">{item.section}</div>}<Link href={item.href} onClick={()=>setMobile(false)} className={`jk-nav-link ${active(item.href)?'active':''}`}><I size={18}/><span>{item.name}</span></Link></React.Fragment>})}</nav>
       <div className="mt-auto border-t border-white/10 p-4">
         <div className="rounded-xl bg-white/5 p-3"><div className="text-[10px] uppercase tracking-wider text-slate-400">ISP / Tenant</div><div className="mt-1 truncate text-sm font-semibold text-white">{props.tenant?.name||'-'}</div>{props.subscription?.plan&&<div className="mt-2 text-xs text-slate-400">{props.subscription.plan.name} · {props.subscription.status}</div>}</div>
         <div className="mt-3 text-[10px] text-slate-500">v{props.release?.version||'1.2.0-dev'} · {props.release?.channel||'development'}</div>
