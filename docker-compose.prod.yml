@@ -42,7 +42,6 @@ services:
     restart: unless-stopped
     env_file: [.env.production]
     environment:
-      RUN_MIGRATIONS: "true"
       APP_KEY_FILE: /run/secrets/app_key
       DB_PASSWORD_FILE: /run/secrets/db_password
       RADIUS_SHARED_SECRET_FILE: /run/secrets/radius_shared_secret
@@ -95,7 +94,6 @@ services:
     command: ["php", "artisan", "queue:work", "--sleep=2", "--tries=3", "--timeout=120", "--max-time=3600"]
     env_file: [.env.production]
     environment:
-      RUN_MIGRATIONS: "false"
       APP_KEY_FILE: /run/secrets/app_key
       DB_PASSWORD_FILE: /run/secrets/db_password
       RADIUS_SHARED_SECRET_FILE: /run/secrets/radius_shared_secret
@@ -115,7 +113,6 @@ services:
     command: ["php", "artisan", "schedule:work"]
     env_file: [.env.production]
     environment:
-      RUN_MIGRATIONS: "false"
       APP_KEY_FILE: /run/secrets/app_key
       DB_PASSWORD_FILE: /run/secrets/db_password
       RADIUS_SHARED_SECRET_FILE: /run/secrets/radius_shared_secret

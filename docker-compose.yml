@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: ${DB_DATABASE:-jaringanku}
       POSTGRES_USER: ${DB_USERNAME:-jaringanku}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-jaringanku_local_2026}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env before starting Docker Compose}
       PGDATA: /var/lib/postgresql/18/docker
     volumes:
       - postgres:/var/lib/postgresql
@@ -43,8 +43,6 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    environment:
-      RUN_MIGRATIONS: "true"
     depends_on:
       postgres:
         condition: service_healthy
@@ -92,8 +90,6 @@ services:
     command: ["php", "artisan", "queue:work", "--sleep=2", "--tries=3", "--timeout=120"]
     env_file:
       - .env
-    environment:
-      RUN_MIGRATIONS: "false"
     depends_on:
       app:
         condition: service_healthy
@@ -110,8 +106,6 @@ services:
     command: ["php", "artisan", "schedule:work"]
     env_file:
       - .env
-    environment:
-      RUN_MIGRATIONS: "false"
     depends_on:
       app:
         condition: service_healthy

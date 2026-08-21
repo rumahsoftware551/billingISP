@@ -45,7 +45,12 @@ COMPOSE="docker compose --env-file .env.production -f docker-compose.prod.yml"
 $COMPOSE config --quiet
 $COMPOSE build app nginx radius backup
 $COMPOSE up -d postgres redis
-$COMPOSE up -d app radius queue scheduler nginx backup
+$COMPOSE up -d app
+# Migrations are an explicit, single deploy step.  They must never be run by
+# every app container restart because that can race during a rolling deploy.
+$COMPOSE exec -T app jaringanku-cli php artisan migrate --force --isolated
+$COMPOSE exec -T app jaringanku-cli php artisan storage:link --force >/dev/null 2>&1 || true
+$COMPOSE up -d radius queue scheduler nginx backup
 $COMPOSE exec -T app jaringanku-cli php artisan db:seed --force
 $COMPOSE exec -T app jaringanku-cli php artisan jaringanku:production-preflight
 $COMPOSE exec -T app jaringanku-cli php artisan jaringanku:phase12-preflight
