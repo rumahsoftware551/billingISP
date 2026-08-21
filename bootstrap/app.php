@@ -11,7 +11,7 @@ use App\Http\Middleware\EnsurePlatformAdmin;
 use App\Http\Middleware\EnsurePartnerPortal;
 use App\Http\Middleware\EnsureInventoryPortal;
 use App\Http\Middleware\RequirePermission;
-use Illuminate\Auth\Middleware\Authenticate;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -27,8 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [HandleInertiaRequests::class, SecurityHeaders::class]);
         $middleware->alias(['tenant' => EnsureTenant::class, 'system-admin' => EnsureSystemAdmin::class, 'portal.auth' => EnsureCustomerPortal::class, 'subscription' => EnsureActiveSubscription::class, 'subscription.limit' => EnforcePlanLimit::class, 'platform-admin' => EnsurePlatformAdmin::class, 'partner.auth' => EnsurePartnerPortal::class, 'inventory.auth' => EnsureInventoryPortal::class, 'permission' => RequirePermission::class]);
-        $middleware->appendToPriorityList(Authenticate::class, EnsureTenant::class);
-        $middleware->prependToPriorityList(SubstituteBindings::class, EnsureTenant::class);
+        $middleware->appendToPriorityList(AuthenticatesRequests::class, EnsureTenant::class);
 
         $trusted = trim((string) env('TRUSTED_PROXIES', ''));
         if ($trusted !== '') {
