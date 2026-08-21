@@ -1,19 +1,21 @@
 <?php
 
-use App\Http\Middleware\EnsureTenant;
-use App\Http\Middleware\HandleInertiaRequests;
-use App\Http\Middleware\EnsureSystemAdmin;
-use App\Http\Middleware\EnsureCustomerPortal;
-use App\Http\Middleware\SecurityHeaders;
-use App\Http\Middleware\EnsureActiveSubscription;
-use App\Http\Middleware\EnforcePlanLimit;
-use App\Http\Middleware\EnsurePlatformAdmin;
-use App\Http\Middleware\EnsurePartnerPortal;
-use App\Http\Middleware\EnsureInventoryPortal;
-use App\Http\Middleware\RequirePermission;
-use Illuminate\Foundation\Application;
-use Illuminate\Foundation\Configuration\Exceptions;
-use Illuminate\Foundation\Configuration\Middleware;
+use AppHttpMiddlewareEnsureTenant;
+use AppHttpMiddlewareHandleInertiaRequests;
+use AppHttpMiddlewareEnsureSystemAdmin;
+use AppHttpMiddlewareEnsureCustomerPortal;
+use AppHttpMiddlewareSecurityHeaders;
+use AppHttpMiddlewareEnsureActiveSubscription;
+use AppHttpMiddlewareEnforcePlanLimit;
+use AppHttpMiddlewareEnsurePlatformAdmin;
+use AppHttpMiddlewareEnsurePartnerPortal;
+use AppHttpMiddlewareEnsureInventoryPortal;
+use AppHttpMiddlewareRequirePermission;
+use IlluminateAuthMiddlewareAuthenticate;
+use IlluminateFoundationApplication;
+use IlluminateFoundationConfigurationExceptions;
+use IlluminateFoundationConfigurationMiddleware;
+use IlluminateRoutingMiddlewareSubstituteBindings;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -25,6 +27,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [HandleInertiaRequests::class, SecurityHeaders::class]);
         $middleware->alias(['tenant' => EnsureTenant::class, 'system-admin' => EnsureSystemAdmin::class, 'portal.auth' => EnsureCustomerPortal::class, 'subscription' => EnsureActiveSubscription::class, 'subscription.limit' => EnforcePlanLimit::class, 'platform-admin' => EnsurePlatformAdmin::class, 'partner.auth' => EnsurePartnerPortal::class, 'inventory.auth' => EnsureInventoryPortal::class, 'permission' => RequirePermission::class]);
+        $middleware->appendToPriorityList(Authenticate::class, EnsureTenant::class);
+        $middleware->prependToPriorityList(SubstituteBindings::class, EnsureTenant::class);
 
         $trusted = trim((string) env('TRUSTED_PROXIES', ''));
         if ($trusted !== '') {
