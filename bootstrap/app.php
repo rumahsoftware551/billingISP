@@ -1,21 +1,21 @@
 <?php
 
-use AppHttpMiddlewareEnsureTenant;
-use AppHttpMiddlewareHandleInertiaRequests;
-use AppHttpMiddlewareEnsureSystemAdmin;
-use AppHttpMiddlewareEnsureCustomerPortal;
-use AppHttpMiddlewareSecurityHeaders;
-use AppHttpMiddlewareEnsureActiveSubscription;
-use AppHttpMiddlewareEnforcePlanLimit;
-use AppHttpMiddlewareEnsurePlatformAdmin;
-use AppHttpMiddlewareEnsurePartnerPortal;
-use AppHttpMiddlewareEnsureInventoryPortal;
-use AppHttpMiddlewareRequirePermission;
-use IlluminateAuthMiddlewareAuthenticate;
-use IlluminateFoundationApplication;
-use IlluminateFoundationConfigurationExceptions;
-use IlluminateFoundationConfigurationMiddleware;
-use IlluminateRoutingMiddlewareSubstituteBindings;
+use App\Http\Middleware\EnsureTenant;
+use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\EnsureSystemAdmin;
+use App\Http\Middleware\EnsureCustomerPortal;
+use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\EnsureActiveSubscription;
+use App\Http\Middleware\EnforcePlanLimit;
+use App\Http\Middleware\EnsurePlatformAdmin;
+use App\Http\Middleware\EnsurePartnerPortal;
+use App\Http\Middleware\EnsureInventoryPortal;
+use App\Http\Middleware\RequirePermission;
+use Illuminate\Auth\Middleware\Authenticate;
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
