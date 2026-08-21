@@ -87,7 +87,7 @@ class HotspotVoucherTest extends TestCase
         $this->assertNotNull($active->activated_at);
         $this->assertNotNull($active->expires_at);
 
-        $this->travel(61)->minutes();
+        $active->forceFill(['expires_at' => now()->subMinute()])->save();
         $result = $service->reconcileCurrentTenant();
         $this->assertSame(1, $result['expired']);
         $this->assertSame('expired', $active->fresh()->status);
