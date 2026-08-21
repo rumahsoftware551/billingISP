@@ -3,7 +3,7 @@
     "name":  "V1.3.0 RC4 RouterOS Compatibility",
     "slug":  "phase-17-v1-3-release-candidate",
     "version":  "17.0.0-rc1",
-    "product_version":  "1.3.0-rc4",
+    "product_version":  "1.3.0-rc8",
     "release_channel":  "release-candidate",
     "cumulative_from":  "Jaringanku V1.3 Phase 01-04 Commercial Candidate",
     "features":  [

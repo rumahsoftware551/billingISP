@@ -59,7 +59,7 @@ $COMPOSE exec -T app jaringanku-cli php artisan jaringanku:phase15-security-audi
 $COMPOSE exec -T app jaringanku-cli php artisan jaringanku:phase16-smoke
 $COMPOSE exec -T app jaringanku-cli php artisan optimize
 $COMPOSE exec -T app jaringanku-cli php artisan queue:restart || true
-$COMPOSE exec -T app jaringanku-cli php artisan jaringanku:release-record --version=1.2.0-dev --notes="Jaringanku Phase 16 development production pre-release deploy"
+$COMPOSE exec -T app jaringanku-cli php artisan jaringanku:release-record --version=1.3.0-rc8 --notes="Jaringanku v1.3.0 RC8 production candidate deploy"
 $COMPOSE ps
 
 echo "Production stack started. Verify reverse proxy/TLS and run:"
