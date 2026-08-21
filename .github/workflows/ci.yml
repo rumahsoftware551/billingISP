@@ -76,7 +76,7 @@ jobs:
         run: php artisan migrate:fresh --force
 
       - name: Run application tests
-        run: php artisan test --stop-on-failure
+        run: vendor/bin/phpunit --stop-on-failure --display-warnings --fail-on-warning
 
       - name: Type-check frontend
         run: npm run typecheck
