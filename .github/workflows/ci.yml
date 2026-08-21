@@ -12,6 +12,15 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: jaringanku_test
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
     services:
       postgres:
         image: postgres:18-alpine
@@ -49,7 +58,7 @@ jobs:
           node-version: '22'
 
       - name: Install frontend dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Verify release source manifest
         run: sh ./scripts/verify-release.sh
