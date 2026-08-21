@@ -80,7 +80,7 @@ Configure tenant credentials from `/integrations`. Do not enable local `mock` pa
 
 ## 6. Backup
 
-Automatic backup service runs continuously. Manual backup:
+Automatic backup service runs continuously. Each backup consists of a database dump plus a matching persistent-storage archive. Manual backup:
 
 ```bash
 ./scripts/prod-backup.sh
@@ -93,6 +93,8 @@ Restore is destructive and intentionally requires typing `RESTORE`:
 ```bash
 ./scripts/prod-restore.sh backups/jaringanku-manual-YYYYMMDDTHHMMSSZ.dump
 ```
+
+The matching `jaringanku-manual-YYYYMMDDTHHMMSSZ.storage.tar.gz` file is required and is restored together with the database.
 
 ## 8. Deploy update
 

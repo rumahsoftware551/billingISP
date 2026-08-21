@@ -55,7 +55,18 @@ WEBHOOK_ALLOW_PRIVATE_NETWORKS=false
 WEBHOOK_ALLOW_INSECURE_HTTP=false
 ```
 
-This blocks normal private/reserved IPv4 targets and requires HTTPS. Only enable private targets when you intentionally operate trusted internal integrations.
+This blocks private/reserved IPv4 and IPv6 targets and requires HTTPS. Hostname deliveries are pinned to the addresses that passed validation, and HTTP redirects are disabled. Only enable private targets when you intentionally operate trusted internal integrations.
+
+## MikroTik outbound target policy
+
+RouterOS REST credentials can be used to reach privileged network resources. In production, configure the exact private/public ranges that contain your routers before adding them in the application:
+
+```env
+MIKROTIK_ALLOWED_CIDRS=192.168.88.0/24,10.20.0.0/16
+MIKROTIK_REQUIRE_TLS=true
+```
+
+The application resolves each router hostname and rejects every resolved address that is outside this allowlist. Hostname connections are pinned to the validated addresses for the request and redirects are disabled, reducing DNS-rebinding and redirect-based SSRF risk. Do not use `0.0.0.0/0` or `::/0`.
 
 ## Health endpoints
 
@@ -81,11 +92,11 @@ The Compose Nginx container uses Laravel's built-in `/up` endpoint for its conta
 
 ## Backup model
 
-The production backup service uses PostgreSQL `pg_dump -Fc` custom archive format and saves SHA-256 files alongside dumps. Retention is controlled with:
+The production backup service creates a paired PostgreSQL `pg_dump -Fc` archive and compressed `storage/app` archive for the same UTC timestamp. It writes per-file SHA-256 sidecars plus a combined manifest. Retention is controlled with:
 
 ```env
 BACKUP_RETENTION_DAYS=14
 BACKUP_INTERVAL_SECONDS=86400
 ```
 
-A backup is not a recovery plan until restore has been tested. Use a staging/local environment for routine restore drills.
+A backup is not a recovery plan until the paired database-and-storage restore has been tested. Use a staging/local environment for routine restore drills. `prod-restore.sh` intentionally refuses a database-only restore unless a matching `.storage.tar.gz` archive is present.

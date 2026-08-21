@@ -62,11 +62,6 @@ try {
   sleep 2
 done
 
-if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
-  php artisan migrate --force
-  php artisan storage:link --force >/dev/null 2>&1 || true
-fi
-
 if [ "${APP_ENV:-production}" = "production" ]; then
   php artisan optimize
 else

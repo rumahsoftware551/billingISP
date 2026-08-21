@@ -23,6 +23,11 @@ export default function NetworkIndex({routers,nas,plans,pools,radius}:{routers:R
   return <Layout>
     <Head title="Network Core"/>
     <div className="space-y-6">
+      <section className="rounded-2xl border border-sky-200 bg-sky-50 p-5 text-slate-800">
+        <div className="text-lg font-black">Pusat Jaringan NOC</div>
+        <p className="mt-1 text-sm text-slate-600">Ikuti urutan ini agar konfigurasi baru tidak mengganggu pelanggan aktif.</p>
+        <div className="mt-4 grid gap-2 text-sm md:grid-cols-5"><Step n="1" label="Cek RADIUS"/><Step n="2" label="Daftarkan NAS"/><Step n="3" label="Buat Paket"/><Step n="4" label="Atur IP Pool"/><Step n="5" label="Router Lanjutan"/></div>
+      </section>
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Metric title="Router" value={routers.length}/><Metric title="NAS" value={nas.length}/><Metric title="RADIUS SQL" value={radius.test_ready?'Ready':'Not ready'}/><Metric title="Plans" value={plans.length}/>
       </section>
@@ -38,7 +43,8 @@ export default function NetworkIndex({routers,nas,plans,pools,radius}:{routers:R
       </section>
 
       <section className="grid xl:grid-cols-2 gap-6">
-        <Card title="Routers / MikroTik REST">
+        <Card title="5. Router MikroTik (lanjutan)">
+          <p className="-mt-2 mb-4 text-sm text-amber-300">Khusus RouterOS v7 dengan REST HTTPS. Untuk RouterOS v6, cukup daftarkan NAS pada langkah 2; jangan isi kredensial REST.</p>
           <form className="grid md:grid-cols-2 gap-3 mb-5" onSubmit={e=>{e.preventDefault();routerForm.post('/network/routers',{preserveScroll:true,onSuccess:()=>routerForm.reset('name','host','api_password')});}}>
             <input className={input} value={routerForm.data.name} onChange={e=>routerForm.setData('name',e.target.value)} placeholder="Nama Router"/>
             <input className={input} value={routerForm.data.host} onChange={e=>routerForm.setData('host',e.target.value)} placeholder="IP / hostname"/>
@@ -51,7 +57,7 @@ export default function NetworkIndex({routers,nas,plans,pools,radius}:{routers:R
           <div className="space-y-2">{routers.map(r=><div key={r.id} className="rounded-lg border border-slate-800 p-3 flex items-center justify-between gap-3"><div><div className="font-semibold">{r.name} <Status value={r.status}/></div><div className="text-xs text-slate-400">{r.host}:{r.rest_port} · {r.board_name||'-'} · ROS {r.routeros_version||'-'}</div>{r.last_error && <div className="text-xs text-rose-300 mt-1 line-clamp-2">{r.last_error}</div>}</div><div className="flex gap-2"><button onClick={()=>inertiaRouter.post(`/network/routers/${r.id}/test`,{}, {preserveScroll:true})} className="rounded bg-emerald-700 px-3 py-1 text-xs">Test</button><button onClick={()=>del(`/network/routers/${r.id}`)} className="rounded bg-rose-900 px-3 py-1 text-xs">Hapus</button></div></div>)}</div>
         </Card>
 
-        <Card title="NAS / RADIUS Clients">
+        <Card title="2. NAS / RADIUS Client">
           <form className="grid md:grid-cols-2 gap-3 mb-5" onSubmit={e=>{e.preventDefault();nasForm.post('/network/nas',{preserveScroll:true,onSuccess:()=>nasForm.reset('nasname','shortname','secret','description')});}}>
             <select className={input} value={nasForm.data.router_id} onChange={e=>nasForm.setData('router_id',e.target.value)}><option value="">Tanpa link router</option>{routers.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</select>
             <input className={input} value={nasForm.data.nasname} onChange={e=>nasForm.setData('nasname',e.target.value)} placeholder="NAS IP, contoh 192.168.1.1"/>
@@ -67,7 +73,7 @@ export default function NetworkIndex({routers,nas,plans,pools,radius}:{routers:R
       </section>
 
       <section className="grid xl:grid-cols-2 gap-6">
-        <Card title="Internet Plans">
+        <Card title="3. Paket Internet">
           <form className="grid md:grid-cols-2 gap-3 mb-5" onSubmit={e=>{e.preventDefault();planForm.post('/network/plans',{preserveScroll:true,onSuccess:()=>planForm.reset('name','code')});}}>
             <input className={input} value={planForm.data.name} onChange={e=>planForm.setData('name',e.target.value)} placeholder="Nama paket"/>
             <input className={input} value={planForm.data.code} onChange={e=>planForm.setData('code',e.target.value)} placeholder="Kode, contoh HOME20"/>
@@ -80,7 +86,7 @@ export default function NetworkIndex({routers,nas,plans,pools,radius}:{routers:R
           <div className="space-y-2">{plans.map(p=><div key={p.id} className="rounded-lg border border-slate-800 p-3 flex justify-between gap-3"><div><div className="font-semibold">{p.name} <span className="text-xs text-slate-500">{p.code}</span></div><div className="text-xs text-slate-400">{p.upload_kbps}k ↑ / {p.download_kbps}k ↓ · Rp {Number(p.price).toLocaleString('id-ID')} · acct {p.acct_interim_interval}s</div></div><button onClick={()=>del(`/network/plans/${p.id}`)} className="rounded bg-rose-900 px-3 py-1 text-xs h-fit">Hapus</button></div>)}</div>
         </Card>
 
-        <Card title="IP Pools">
+        <Card title="4. IP Pool">
           <form className="grid md:grid-cols-2 gap-3 mb-5" onSubmit={e=>{e.preventDefault();poolForm.post('/network/pools',{preserveScroll:true,onSuccess:()=>poolForm.reset('name')});}}>
             <input className={input} value={poolForm.data.name} onChange={e=>poolForm.setData('name',e.target.value)} placeholder="Nama pool"/>
             <input className={input} value={poolForm.data.gateway} onChange={e=>poolForm.setData('gateway',e.target.value)} placeholder="Gateway"/>
@@ -98,3 +104,4 @@ export default function NetworkIndex({routers,nas,plans,pools,radius}:{routers:R
 function Card({title,children}:{title:string,children:React.ReactNode}) { return <section className="rounded-xl border border-slate-800 bg-slate-900/50 p-5"><h2 className="text-lg font-bold mb-4">{title}</h2>{children}</section>; }
 function Metric({title,value}:{title:string,value:any}) { return <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4"><div className="text-xs uppercase tracking-wide text-slate-500">{title}</div><div className="text-2xl font-bold mt-1">{value}</div></div>; }
 function Status({value}:{value:string}) { const cls=value==='online'?'bg-emerald-900 text-emerald-200':value==='offline'?'bg-rose-900 text-rose-200':'bg-slate-800 text-slate-300'; return <span className={`ml-2 rounded px-2 py-0.5 text-[10px] uppercase ${cls}`}>{value}</span>; }
+function Step({n,label}:{n:string,label:string}) { return <div className="flex items-center gap-2 rounded-xl border border-sky-100 bg-white px-3 py-2"><span className="grid h-6 w-6 place-items-center rounded-full bg-sky-600 text-xs font-black text-white">{n}</span><span className="font-semibold">{label}</span></div>; }

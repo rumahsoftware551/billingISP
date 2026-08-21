@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Http;
 
 class MikrotikRestClient
 {
+    public function __construct(private readonly MikrotikTargetPolicy $targetPolicy) {}
+
     private function request(Router $router): PendingRequest
     {
         $request = Http::withBasicAuth($router->api_username, $router->api_password)
@@ -20,9 +22,19 @@ class MikrotikRestClient
 
     public function systemResource(Router $router): array
     {
-        $base = sprintf('https://%s:%d/rest', $router->host, $router->rest_port);
+        $port = (int) $router->rest_port;
+        $target = $this->targetPolicy->resolveAllowedHostOrFail((string) $router->host);
+        $this->targetPolicy->assertTlsPolicy((bool) $router->verify_tls);
+        $host = str_contains($target['host'], ':') ? '['.$target['host'].']' : $target['host'];
+        $base = sprintf('https://%s:%d/rest', $host, $port);
+        $resolve = $this->targetPolicy->curlResolveEntries($target, $port);
+        $request = $this->request($router)->withoutRedirecting();
 
-        return $this->request($router)
+        if ($resolve !== []) {
+            $request = $request->withOptions(['curl' => [CURLOPT_RESOLVE => $resolve]]);
+        }
+
+        return $request
             ->get($base.'/system/resource')
             ->throw()
             ->json();

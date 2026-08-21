@@ -1,0 +1,87 @@
+name: Quality gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-gate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: PHP, database, and feature tests
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: jaringanku_test
+          POSTGRES_USER: jaringanku
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U jaringanku -d jaringanku_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:dGVzdGluZy1hcHAta2V5LW11c3QtYmUtMzItYnl0ZXM=
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: jaringanku_test
+      DB_USERNAME: jaringanku
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      SEED_ADMIN_PASSWORD: test-only-password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: bcmath, intl, mbstring, pdo_pgsql, zip
+          coverage: none
+      - name: Validate Composer manifest
+        run: composer validate --strict
+      - name: Install PHP dependencies from lockfile
+        run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Audit PHP dependencies
+        run: composer audit --locked --no-interaction
+      - name: PHP syntax check
+        run: find app bootstrap config database routes tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Deployment shell syntax check
+        run: find docker scripts -type f -name '*.sh' -print0 | xargs -0 -r -n1 sh -n
+      - name: Run feature tests
+        run: |
+          test -n "$(find tests -type f -name '*Test.php' -print -quit)"
+          php artisan test --colors=always
+
+  frontend:
+    name: TypeScript and production frontend build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Node dependencies from lockfile
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: TypeScript check
+        run: npx tsc --noEmit
+      - name: Build frontend
+        run: npm run build
+      - name: Preserve generated Node lockfile for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-package-lock
+          path: package-lock.json
+          if-no-files-found: error
