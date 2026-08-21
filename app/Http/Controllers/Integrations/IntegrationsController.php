@@ -68,6 +68,13 @@ class IntegrationsController extends Controller
         if ($data['mode']==='log' && ! app()->environment('local')) return back()->with('error','WhatsApp LOG mode hanya untuk local environment.');
         $setting=WhatsAppSetting::query()->firstOrNew();
         $old=$setting->exists?['mode'=>$setting->mode,'enabled'=>$setting->enabled,'graph_version'=>$setting->graph_version]:null;
+        $cloudEnabled = $data['mode'] === 'cloud' && (bool) $data['enabled'];
+        $accessToken = filled($data['access_token'] ?? null) ? $data['access_token'] : $setting->access_token;
+        $appSecret = filled($data['app_secret'] ?? null) ? $data['app_secret'] : $setting->app_secret;
+        $verifyToken = filled($data['verify_token'] ?? null) ? $data['verify_token'] : $setting->verify_token;
+        if ($cloudEnabled && (! filled($accessToken) || ! filled($appSecret) || ! filled($verifyToken))) {
+            return back()->with('error', 'WhatsApp Cloud tidak dapat diaktifkan sebelum access token, app secret, dan verify token terisi.');
+        }
         foreach(['mode','enabled','graph_version','phone_number_id','business_account_id','default_country_code','template_language','template_map'] as $key)$setting->{$key}=$data[$key]??null;
         foreach(['access_token','app_secret','verify_token'] as $key)if(filled($data[$key]??null))$setting->{$key}=$data[$key];
         $setting->provider='meta_cloud'; $setting->save();

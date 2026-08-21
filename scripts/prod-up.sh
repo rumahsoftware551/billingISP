@@ -44,7 +44,9 @@ COMPOSE="docker compose --env-file .env.production -f docker-compose.prod.yml"
 ./scripts/verify-release.sh
 $COMPOSE config --quiet
 $COMPOSE build app nginx radius backup
-$COMPOSE up -d postgres redis
+$COMPOSE up -d postgres redis backup
+./scripts/prod-backup.sh
+$COMPOSE run --rm --no-deps migrate
 $COMPOSE up -d app radius queue scheduler nginx backup
 $COMPOSE exec -T app jaringanku-cli php artisan db:seed --force
 $COMPOSE exec -T app jaringanku-cli php artisan jaringanku:production-preflight

@@ -12,6 +12,7 @@ class WhatsAppWebhookController extends Controller
     {
         $tenant=Tenant::query()->where('slug',$tenantSlug)->firstOrFail(); app()->instance(CurrentTenant::class,new CurrentTenant($tenant));
         $setting=WhatsAppSetting::query()->firstOrFail();
+        abort_unless($setting->enabled && $setting->mode === 'cloud' && filled($setting->verify_token),404);
         abort_unless($request->query('hub_mode')==='subscribe' || $request->query('hub.mode')==='subscribe',403);
         $token=(string)($request->query('hub_verify_token')??$request->query('hub.verify_token',''));
         abort_unless(filled($setting->verify_token)&&hash_equals((string)$setting->verify_token,$token),403);
@@ -21,11 +22,10 @@ class WhatsAppWebhookController extends Controller
     {
         $tenant=Tenant::query()->where('slug',$tenantSlug)->firstOrFail(); app()->instance(CurrentTenant::class,new CurrentTenant($tenant));
         $setting=WhatsAppSetting::query()->firstOrFail();
-        if(filled($setting->app_secret)){
-            $sig=(string)$request->header('X-Hub-Signature-256','');
-            $expected='sha256='.hash_hmac('sha256',$request->getContent(),(string)$setting->app_secret);
-            abort_unless($sig!==''&&hash_equals($expected,$sig),401);
-        }
+        abort_unless($setting->enabled && $setting->mode === 'cloud' && filled($setting->app_secret),404);
+        $sig=(string)$request->header('X-Hub-Signature-256','');
+        $expected='sha256='.hash_hmac('sha256',$request->getContent(),(string)$setting->app_secret);
+        abort_unless($sig!==''&&hash_equals($expected,$sig),401);
         $payload=$request->json()->all();
         foreach(data_get($payload,'entry',[]) as $entry){foreach(data_get($entry,'changes',[]) as $change){foreach(data_get($change,'value.statuses',[]) as $status){
             $id=(string)($status['id']??''); if($id==='')continue;
