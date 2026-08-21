@@ -1,0 +1,7 @@
+<?php
+namespace App\Models;
+use Illuminate\Database\Eloquent\Model;
+class PaymentGatewayEvent extends Model {
+    protected $guarded=[];
+    protected function casts():array{return ['payload'=>'array','signature_valid'=>'boolean','processed_at'=>'datetime'];}
+}

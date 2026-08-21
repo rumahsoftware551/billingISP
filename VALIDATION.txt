@@ -1,0 +1,108 @@
+JARINGANKU PHASE 16 — COMMERCIAL READINESS FULL V2
+Static/source validation report
+Generated: 2026-08-09 (artifact environment)
+
+STATUS: STATIC VALIDATION PASSED
+
+V2 hotfix: Phase 15 cumulative-release regression metadata compatibility fixed.
+
+Scope validated
+---------------
+- Full cumulative source from Phase 01-15 + Phase 16 changes.
+- PHP syntax: PASS — 236 PHP files.
+- TypeScript/TSX syntax parser: PASS — 45 TS/TSX files (including vite.config.ts).
+- Relative TypeScript imports: PASS — 44 application TS/TSX files.
+- JSON parse: PASS — 4 JSON files.
+- Docker Compose YAML parse: PASS — local + production.
+- Shell bash -n: PASS — 13 shell scripts.
+- PowerShell structural scan: PASS — 28 .ps1 scripts.
+  Note: native PowerShell parser is not installed in this artifact environment.
+- Native Nginx syntax test: PASS — docker/nginx/default.conf.
+- Controller imports: PASS — 61 controller imports resolve to source files.
+- Unique named routes: PASS — 157 explicit route names, no duplicates found.
+- Inertia render references: PASS — 38 references resolve to pages.
+- Portal placeholder repair ordering: PASS — customer / mitra / inventory placeholder URLs resolve before dynamic tenant routes.
+- Phase 16 migration + rollback structure: PASS.
+- Phase metadata: PASS — Phase 16 / 1.2.0-dev / development.
+- Phase 15 baseline compatibility: PASS — accepts cumulative versions >=1.1.0; exact v1.1.0 still requires stable channel.
+- ReleaseAcceptanceService compatibility: PASS — Phase 16 development metadata no longer causes a false Phase 15 failure.
+- No fixed Docker subnet in Compose: PASS.
+- No stale Phase 15 image references in Phase 16 Compose: PASS.
+- No executable `docker compose down -v` in scripts: PASS.
+- No runtime .env packaged: PASS.
+- No real secret .txt files packaged: PASS (only *.example templates).
+- No database backup payload packaged: PASS.
+
+V2 regression hotfix assertions
+------------------------------
+- Reproduced V1 failure from screenshot: Phase 16 = 1.2.0-dev/development while Phase 15 required exact 1.1.0/stable.
+- Phase 15 preflight baseline comparison: PASS — PHP version_compare(1.2.0-dev, 1.1.0, >=) is true.
+- Phase 15 release/security audit metadata rule: PASS — newer cumulative development releases accepted; exact v1.1.0 remains stable-only.
+- Phase 16 current metadata ownership: PASS — Phase 16 preflight requires exactly 1.2.0-dev / development.
+- Native Nginx syntax test after V2 changes: PASS.
+- Hotfix adds no database migration and does not change named-volume strategy.
+
+Phase 16 feature assertions
+---------------------------
+- Access Center /access: present.
+- /portal/tenant/login redirect repair: present.
+- /mitra/tenant/login redirect repair: present.
+- /inventory/tenant/login redirect repair: present.
+- Portal login middleware redirects invalid sessions back to login: present for Customer, Mitra and Inventory.
+- Tenant branding model/service/settings: present.
+- Application/login logo + favicon upload: present.
+- Invoice branding asset field: present. PDF engine currently applies custom ISP/app/footer text; image embedding is intentionally not claimed in Phase 16.
+- Custom payment methods: present (QRIS/manual bank/e-wallet/cash/custom).
+- QRIS/payment image upload: present.
+- Customer manual payment-proof upload: present and stored on private local storage.
+- Manual proof admin approve/reject queue: present.
+- Payment posting on approval: present with row lock/idempotent review state guard.
+- User management: present.
+- Custom roles + permission matrix: present.
+- Critical write routes protected by permission middleware: present.
+- Last privileged owner/admin guard: present.
+- Cross-tenant password reset guard for shared user accounts: present.
+- Modern Admin shell/dashboard/customer index: present.
+- Modern Portal Mitra dashboard/customer/billing/commission/ticket pages: present.
+- Modern Portal Inventory dashboard/forms with visible field labels: present.
+- Customer Portal light-shell compatibility + manual payment experience: present.
+
+Runtime/build limitations of this report
+----------------------------------------
+- Docker CLI/daemon is not available in the artifact environment, therefore container build, PostgreSQL migrations, FreeRADIUS authentication/accounting, Redis/queue, and HTTP runtime were NOT claimed as executed here.
+- Full `npm run build`/TypeScript dependency typecheck was not executed because project npm dependencies are not installed in the artifact environment and external dependency installation is unavailable here. TypeScript/TSX syntax and local relative imports were validated instead.
+- Native PowerShell is not available here; PowerShell scripts received structural validation, while the real runtime parser/execution is performed on the user's Windows environment.
+
+Runtime acceptance gate included in package
+-------------------------------------------
+Run on Windows Docker Desktop:
+  .\scripts\local-up.ps1
+
+Phase 16 only:
+  .\scripts\phase16-smoke.ps1
+
+Full cumulative regression:
+  .\scripts\final-regression.ps1
+
+Expected Phase 16 runtime markers:
+  PHASE 16 COMMERCIAL READINESS PREFLIGHT PASSED
+  PHASE 16 COMMERCIAL READINESS SMOKE TEST PASSED
+  JARINGANKU PHASE 16 SIAP · v1.2.0 DEVELOPMENT
+
+Commercial scope note
+---------------------
+Phase 16 is a commercial-readiness/UX repair release. It does NOT claim full RLRadius feature parity. Hotspot/voucher/outlet/reseller-balance parity is intentionally outside this phase and remains on the later roadmap.
+
+V3 Windows PowerShell runtime hotfix assertions
+---------------------------------------------
+- Reproduced user failure point: local-up.ps1 line running `docker compose down --remove-orphans *> $null` under `$ErrorActionPreference = "Stop"`.
+- Root cause isolated: Docker Compose normal progress on STDERR (`Container ... Stopping`) was promoted by Windows PowerShell to NativeCommandError before the script could continue.
+- Quiet native Docker wrapper: present; discards stdout/stderr only for intentionally silent commands and evaluates the real `$LASTEXITCODE`.
+- Docker Engine probe migrated to quiet native wrapper: PASS.
+- Stale network cleanup migrated to quiet native wrapper: PASS.
+- Phase 16 compose-down cleanup migrated to quiet native wrapper: PASS.
+- `docker compose down -v` remains absent: PASS; named volumes are not deleted.
+- Phase 15 V2 cumulative-release compatibility retained: PASS.
+- Phase 16 exact metadata validation retained: PASS.
+- No schema or data migration added by V3 hotfix.
+

@@ -1,0 +1,190 @@
+name: jaringanku-production
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-jaringanku}
+      POSTGRES_USER: ${DB_USERNAME:-jaringanku}
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      PGDATA: /var/lib/postgresql/18/docker
+    secrets: [db_password]
+    volumes:
+      - postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 20s
+    networks: [jaringanku]
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1000"]
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 10s
+    networks: [jaringanku]
+
+  app:
+    image: jaringanku-phase16-app:prod
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    restart: unless-stopped
+    env_file: [.env.production]
+    environment:
+      APP_KEY_FILE: /run/secrets/app_key
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      RADIUS_SHARED_SECRET_FILE: /run/secrets/radius_shared_secret
+      SEED_ADMIN_PASSWORD_FILE: /run/secrets/admin_password
+      HEALTH_TOKEN_FILE: /run/secrets/health_token
+    secrets: [app_key, db_password, radius_shared_secret, admin_password, health_token]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    volumes:
+      - storage:/var/www/html/storage
+    healthcheck:
+      test: ["CMD-SHELL", "php-fpm -t >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    security_opt: ["no-new-privileges:true"]
+    networks: [jaringanku]
+
+  radius:
+    image: jaringanku-phase16-radius:prod
+    build:
+      context: .
+      dockerfile: docker/radius/Dockerfile
+    restart: unless-stopped
+    env_file: [.env.production]
+    environment:
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      RADIUS_SHARED_SECRET_FILE: /run/secrets/radius_shared_secret
+    secrets: [db_password, radius_shared_secret]
+    depends_on:
+      app: {condition: service_healthy}
+      postgres: {condition: service_healthy}
+    ports:
+      - "${RADIUS_AUTH_PORT:-1812}:1812/udp"
+      - "${RADIUS_ACCT_PORT:-1813}:1813/udp"
+    healthcheck:
+      test: ["CMD-SHELL", "freeradius -XC >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 20s
+    security_opt: ["no-new-privileges:true"]
+    networks: [jaringanku]
+
+  queue:
+    image: jaringanku-phase16-app:prod
+    restart: unless-stopped
+    command: ["php", "artisan", "queue:work", "--sleep=2", "--tries=3", "--timeout=120", "--max-time=3600"]
+    env_file: [.env.production]
+    environment:
+      APP_KEY_FILE: /run/secrets/app_key
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      RADIUS_SHARED_SECRET_FILE: /run/secrets/radius_shared_secret
+    secrets: [app_key, db_password, radius_shared_secret]
+    depends_on:
+      app: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    volumes:
+      - storage:/var/www/html/storage
+    security_opt: ["no-new-privileges:true"]
+    stop_grace_period: 35s
+    networks: [jaringanku]
+
+  scheduler:
+    image: jaringanku-phase16-app:prod
+    restart: unless-stopped
+    command: ["php", "artisan", "schedule:work"]
+    env_file: [.env.production]
+    environment:
+      APP_KEY_FILE: /run/secrets/app_key
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      RADIUS_SHARED_SECRET_FILE: /run/secrets/radius_shared_secret
+    secrets: [app_key, db_password, radius_shared_secret]
+    depends_on:
+      app: {condition: service_healthy}
+    volumes:
+      - storage:/var/www/html/storage
+    security_opt: ["no-new-privileges:true"]
+    networks: [jaringanku]
+
+  nginx:
+    image: jaringanku-phase16-nginx:prod
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      app: {condition: service_healthy}
+    ports:
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-8080}:80"
+    volumes:
+      - storage:/var/www/html/storage:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/up || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    security_opt: ["no-new-privileges:true"]
+    networks: [jaringanku]
+
+  backup:
+    image: jaringanku-phase16-backup:prod
+    build:
+      context: .
+      dockerfile: docker/backup/Dockerfile
+    restart: unless-stopped
+    env_file: [.env.production]
+    environment:
+      DB_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password]
+    depends_on:
+      postgres: {condition: service_healthy}
+    volumes:
+      - backups:/backups
+      - storage:/storage:ro
+    security_opt: ["no-new-privileges:true"]
+    networks: [jaringanku]
+
+volumes:
+  postgres:
+    name: ${POSTGRES_VOLUME_NAME:-jaringanku-postgres}
+  redis:
+    name: ${REDIS_VOLUME_NAME:-jaringanku-redis}
+  storage:
+    name: ${STORAGE_VOLUME_NAME:-jaringanku-storage}
+  backups:
+    name: ${BACKUP_VOLUME_NAME:-jaringanku-backups}
+
+networks:
+  jaringanku:
+    driver: bridge
+
+secrets:
+  app_key:
+    file: ./secrets/app_key.txt
+  db_password:
+    file: ./secrets/db_password.txt
+  radius_shared_secret:
+    file: ./secrets/radius_shared_secret.txt
+  admin_password:
+    file: ./secrets/admin_password.txt
+  health_token:
+    file: ./secrets/health_token.txt

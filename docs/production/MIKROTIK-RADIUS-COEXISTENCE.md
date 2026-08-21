@@ -140,4 +140,3 @@ gateway, bergantung pada topologi akhir.
 Promosi dari pilot ke migrasi massal baru boleh dilakukan setelah seluruh uji
 di atas lulus dan backup konfigurasi MikroTik serta backup database/storage
 aplikasi sudah diverifikasi.
-6c0be77e60b3a668eabbd4964eb730b7a1ad368b

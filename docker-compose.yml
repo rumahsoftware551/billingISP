@@ -1,0 +1,149 @@
+name: jaringanku-phase16
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-jaringanku}
+      POSTGRES_USER: ${DB_USERNAME:-jaringanku}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env before starting Docker Compose}
+      PGDATA: /var/lib/postgresql/18/docker
+    volumes:
+      - postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 20s
+    networks:
+      - jaringanku
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 10s
+    networks:
+      - jaringanku
+
+  app:
+    image: jaringanku-phase16-app:local
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - storage:/var/www/html/storage
+    healthcheck:
+      test: ["CMD-SHELL", "php-fpm -t >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+    networks:
+      - jaringanku
+
+  radius:
+    image: jaringanku-phase16-radius:local
+    build:
+      context: .
+      dockerfile: docker/radius/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      app:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${RADIUS_AUTH_PORT:-1812}:1812/udp"
+      - "${RADIUS_ACCT_PORT:-1813}:1813/udp"
+    healthcheck:
+      test: ["CMD-SHELL", "freeradius -XC >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 20s
+    networks:
+      - jaringanku
+
+  queue:
+    image: jaringanku-phase16-app:local
+    restart: unless-stopped
+    command: ["php", "artisan", "queue:work", "--sleep=2", "--tries=3", "--timeout=120"]
+    env_file:
+      - .env
+    depends_on:
+      app:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - storage:/var/www/html/storage
+    networks:
+      - jaringanku
+
+  scheduler:
+    image: jaringanku-phase16-app:local
+    restart: unless-stopped
+    command: ["php", "artisan", "schedule:work"]
+    env_file:
+      - .env
+    depends_on:
+      app:
+        condition: service_healthy
+    volumes:
+      - storage:/var/www/html/storage
+    networks:
+      - jaringanku
+
+  nginx:
+    image: jaringanku-phase16-nginx:local
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-8080}:80"
+    volumes:
+      - storage:/var/www/html/storage:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/up || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    networks:
+      - jaringanku
+
+volumes:
+  postgres:
+    name: ${POSTGRES_VOLUME_NAME:-jaringanku-postgres}
+  redis:
+    name: ${REDIS_VOLUME_NAME:-jaringanku-redis}
+  storage:
+    name: ${STORAGE_VOLUME_NAME:-jaringanku-storage}
+
+networks:
+  jaringanku:
+    driver: bridge
