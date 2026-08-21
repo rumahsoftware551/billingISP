@@ -1,0 +1,163 @@
+name: Jaringanku V1.3 CI
+
+on:
+  push:
+    branches:
+      - 'upgrade/**'
+      - 'release/**'
+      - develop
+
+  pull_request:
+    branches:
+      - develop
+      - main
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jaringanku-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gate:
+    name: PHP Tests + Frontend Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: jaringanku_test
+          POSTGRES_USER: jaringanku
+          POSTGRES_PASSWORD: jaringanku_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U jaringanku -d jaringanku_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      APP_NAME: Jaringanku
+      APP_ENV: testing
+      APP_DEBUG: false
+      APP_URL: https://localhost
+
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: jaringanku_test
+      DB_USERNAME: jaringanku
+      DB_PASSWORD: jaringanku_ci
+      DB_SSLMODE: disable
+
+      CACHE_STORE: array
+      CACHE_LIMITER: array
+      SESSION_DRIVER: array
+      SESSION_SECURE_COOKIE: true
+      QUEUE_CONNECTION: sync
+
+      MAIL_MAILER: array
+
+      FORCE_HTTPS: true
+      TRUSTED_PROXIES: ""
+      HEALTH_TOKEN: ci-jaringanku-health-token-2026
+      RADIUS_CLIENT_NETWORK: 10.10.10.1/32
+
+      JARINGANKU_VERSION: 1.3.0-dev
+      RELEASE_CHANNEL: development
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup PHP 8.5
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: pdo_pgsql, mbstring, intl, zip, bcmath, pcntl
+          coverage: none
+          tools: composer:v2
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Show PHP environment
+        run: |
+          php --version
+          composer --version
+
+      - name: Prepare Laravel writable directories
+        run: |
+          mkdir -p bootstrap/cache
+          mkdir -p storage/framework/cache/data
+          mkdir -p storage/framework/sessions
+          mkdir -p storage/framework/views
+          mkdir -p storage/logs
+          chmod -R 775 bootstrap/cache storage
+
+      - name: Validate Composer files
+        run: composer validate --strict --no-check-publish
+
+      - name: Install PHP dependencies
+        env:
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ secrets.GITHUB_TOKEN }}"}}'
+        run: |
+          composer install \
+            --prefer-dist \
+            --no-interaction \
+            --no-progress
+
+      - name: Generate CI application key
+        shell: bash
+        run: |
+          APP_KEY_VALUE=$(php -r "echo 'base64:'.base64_encode(random_bytes(32));")
+          echo "APP_KEY=$APP_KEY_VALUE" >> "$GITHUB_ENV"
+
+      - name: Clear Laravel caches
+        run: |
+          php artisan config:clear
+          php artisan cache:clear
+
+      - name: Run database migrations
+        run: php artisan migrate --force
+
+      - name: Run strict security acceptance audit
+        run: php artisan jaringanku:phase15-security-audit --strict --no-persist
+
+      - name: Run network commercial acceptance gate
+
+        run: php artisan jaringanku:network-acceptance --strict
+
+
+      - name: Run V1.3 release candidate source gate
+
+
+        run: bash scripts/release-candidate-check.sh
+
+
+
+      - name: Run Laravel automated tests
+        run: php artisan test --colors=always
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Final CI summary
+        run: |
+          echo "======================================"
+          echo "JARINGANKU V1.3 QUALITY GATE PASSED"
+          echo "======================================"

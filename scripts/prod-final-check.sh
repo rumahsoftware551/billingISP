@@ -17,6 +17,7 @@ $COMPOSE exec -T app jaringanku-cli php artisan jaringanku:phase14-preflight
 $COMPOSE exec -T app jaringanku-cli php artisan jaringanku:phase15-preflight
 $COMPOSE exec -T app jaringanku-cli php artisan jaringanku:phase16-preflight
 $COMPOSE exec -T app jaringanku-cli php artisan jaringanku:phase15-security-audit --strict
+$COMPOSE exec -T app jaringanku-cli php artisan jaringanku:network-acceptance --strict
 $COMPOSE exec -T app jaringanku-cli php artisan jaringanku:phase16-smoke
 $COMPOSE exec -T app jaringanku-cli php artisan migrate:status --no-interaction >/dev/null
 $COMPOSE exec -T postgres sh -lc 'PGPASSWORD="$POSTGRES_PASSWORD" pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --schema-only >/dev/null'
@@ -32,4 +33,4 @@ if command -v curl >/dev/null 2>&1; then
   }
 fi
 
-echo "JARINGANKU v1.2.0-dev PHASE 16 PRODUCTION PRE-RELEASE CHECK PASSED"
+echo "JARINGANKU v1.3.0-rc8 PHASE 17 PRODUCTION PRE-RELEASE CHECK PASSED"

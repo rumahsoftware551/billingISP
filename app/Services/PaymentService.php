@@ -27,14 +27,54 @@ class PaymentService
         ?string $notes,
         ?int $actorUserId,
         ?int $partnerId = null,
-        ?int $partnerAccountId = null
+        ?int $partnerAccountId = null,
+        ?string $idempotencyKey = null,
+        string $source = 'manual',
     ): Payment {
         if ($amount <= 0) {
             throw ValidationException::withMessages(['amount' => 'Nominal pembayaran harus lebih dari 0.']);
         }
+        $source = trim($source);
+        $idempotencyKey = $idempotencyKey === null ? null : trim($idempotencyKey);
+        if ($source === '' || mb_strlen($source) > 40) {
+            throw ValidationException::withMessages(['source' => 'Sumber pembayaran tidak valid.']);
+        }
+        if ($idempotencyKey === '') {
+            $idempotencyKey = null;
+        }
+        if ($idempotencyKey !== null && mb_strlen($idempotencyKey) > 128) {
+            throw ValidationException::withMessages(['idempotency_key' => 'Idempotency key terlalu panjang.']);
+        }
 
-        $payment = DB::transaction(function () use ($invoice, $amount, $method, $reference, $paidAt, $notes, $actorUserId, $partnerId, $partnerAccountId) {
+        $payment = DB::transaction(function () use ($invoice, $amount, $method, $reference, $paidAt, $notes, $actorUserId, $partnerId, $partnerAccountId, $idempotencyKey, $source) {
             $locked = Invoice::query()->whereKey($invoice->id)->lockForUpdate()->firstOrFail();
+            $fingerprint = hash('sha256', json_encode([
+                'invoice_id' => (int) $locked->id,
+                'amount' => $amount,
+                'method' => $method,
+                'reference' => $reference,
+                'source' => $source,
+            ], JSON_THROW_ON_ERROR));
+
+            if ($idempotencyKey !== null) {
+                $existing = Payment::query()
+                    ->where('source', $source)
+                    ->where('idempotency_key', $idempotencyKey)
+                    ->lockForUpdate()
+                    ->first();
+                if ($existing) {
+                    if ($existing->request_fingerprint !== $fingerprint
+                        || ! $existing->allocations()->where('invoice_id', $locked->id)->exists()) {
+                        throw ValidationException::withMessages([
+                            'idempotency_key' => 'Idempotency key sudah digunakan untuk permintaan pembayaran yang berbeda.',
+                        ]);
+                    }
+
+                    return $existing
+                        ->load(['customer', 'allocations.invoice'])
+                        ->setAttribute('idempotency_replayed', true);
+                }
+            }
             if (in_array($locked->status, ['void'], true)) {
                 throw ValidationException::withMessages(['amount' => 'Invoice void tidak dapat dibayar.']);
             }
@@ -63,7 +103,10 @@ class PaymentService
                 'payment_number' => $paymentNumber,
                 'amount' => $amount,
                 'method' => $method,
+                'source' => $source,
                 'reference' => $reference,
+                'idempotency_key' => $idempotencyKey,
+                'request_fingerprint' => $idempotencyKey === null ? null : $fingerprint,
                 'paid_at' => $paidAtCarbon,
                 'status' => 'posted',
                 'notes' => $notes,
@@ -93,6 +136,10 @@ class PaymentService
 
             return $payment->load(['customer', 'allocations.invoice']);
         }, 3);
+
+        if ($payment->getAttribute('idempotency_replayed')) {
+            return $payment;
+        }
 
         // A valid payment must remain posted even if a network-side automation action fails.
         // The scheduled automation runner will retry later.
@@ -124,4 +171,3 @@ class PaymentService
         return $payment;
     }
 }
-

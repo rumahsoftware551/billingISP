@@ -42,11 +42,14 @@ class SystemHealthService
         }, false);
 
         $coreReady = collect(['database', 'redis', 'storage'])->every(fn ($key) => ($checks[$key]['ok'] ?? false) === true);
+        $businessReady = $coreReady
+            && ($checks['queue']['ok'] ?? false) === true
+            && ($checks['scheduler']['ok'] ?? false) === true;
         $degraded = collect($checks)->contains(fn ($check) => ($check['ok'] ?? false) === false);
 
         return [
-            'status' => $coreReady ? ($degraded ? 'degraded' : 'healthy') : 'unhealthy',
-            'ready' => $coreReady,
+            'status' => $businessReady ? ($degraded ? 'degraded' : 'healthy') : 'unhealthy',
+            'ready' => $businessReady,
             'checks' => $checks,
             'checked_at' => now()->toIso8601String(),
         ];

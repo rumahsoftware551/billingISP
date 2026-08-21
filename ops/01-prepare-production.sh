@@ -79,8 +79,8 @@ updates={
  'RADIUS_CLIENT_NETWORK':nas,
  'MIKROTIK_VERIFY_TLS':'true',
  'MAIL_FROM_ADDRESS':f'no-reply@{domain}',
- 'JARINGANKU_VERSION':'1.2.0-dev',
- 'RELEASE_CHANNEL':'development',
+ 'JARINGANKU_VERSION':'1.3.0-rc8',
+ 'RELEASE_CHANNEL':'release-candidate',
  'PHASE4_ACCOUNTING_SMOKE':'false',
  'PHASE5_BILLING_SMOKE':'false',
  'PHASE6_AUTOMATION_SMOKE':'false',
@@ -120,7 +120,7 @@ echo "Domain      : $DOMAIN"
 echo "Admin email : $ADMIN_EMAIL"
 echo "Tenant      : $TENANT_NAME ($TENANT_SLUG)"
 echo "NAS CIDR    : $NAS_CIDR"
-echo "Release     : Jaringanku 1.2.0-dev Phase 16 FULL V3"
+echo "Release     : Jaringanku 1.3.0-rc8 Phase 17 release candidate"
 echo ""
 echo "Secret admin tersimpan di secrets/admin_password.txt (chmod 600)."
 echo "Lanjutkan: sudo ./ops/02-deploy-app.sh"

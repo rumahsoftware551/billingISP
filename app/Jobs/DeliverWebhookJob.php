@@ -55,6 +55,7 @@ class DeliverWebhookJob implements ShouldQueue
         try {
             $response = Http::asJson()
                 ->acceptJson()
+                ->withoutRedirecting()
                 ->timeout(max(1, min(30, (int) $endpoint->timeout_seconds)))
                 ->withUserAgent((string) config('jaringanku.webhook_user_agent'))
                 ->withHeaders(array_filter([

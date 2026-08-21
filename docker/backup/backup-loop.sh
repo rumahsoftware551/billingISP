@@ -23,21 +23,33 @@ DB_DATABASE="${DB_DATABASE:-jaringanku}"
 DB_USERNAME="${DB_USERNAME:-jaringanku}"
 RETENTION="${BACKUP_RETENTION_DAYS:-14}"
 INTERVAL="${BACKUP_INTERVAL_SECONDS:-86400}"
+STORAGE_PATH="${BACKUP_STORAGE_PATH:-/storage}"
+
+[ -d "$STORAGE_PATH" ] || { echo "Storage path tidak ditemukan: $STORAGE_PATH" >&2; exit 1; }
 mkdir -p /backups
 
 while true; do
   stamp=$(date -u +%Y%m%dT%H%M%SZ)
-  target="/backups/jaringanku-${stamp}.dump"
-  temp="${target}.tmp"
-  echo "[$(date -u +%FT%TZ)] Starting PostgreSQL backup to ${target}"
-  if pg_dump -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USERNAME" -d "$DB_DATABASE" -Fc -f "$temp"; then
-    mv "$temp" "$target"
-    sha256sum "$target" > "${target}.sha256"
-    echo "[$(date -u +%FT%TZ)] Backup complete: ${target}"
+  database_target="/backups/jaringanku-${stamp}.dump"
+  storage_target="/backups/jaringanku-${stamp}.storage.tar.gz"
+  manifest_target="/backups/jaringanku-${stamp}.manifest.sha256"
+  database_temp="${database_target}.tmp"
+  storage_temp="${storage_target}.tmp"
+
+  echo "[$(date -u +%FT%TZ)] Starting PostgreSQL and storage backup"
+  if pg_dump -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USERNAME" -d "$DB_DATABASE" -Fc -f "$database_temp" \
+    && tar -C "$STORAGE_PATH" -czf "$storage_temp" .; then
+    mv "$database_temp" "$database_target"
+    mv "$storage_temp" "$storage_target"
+    (
+      cd /backups
+      sha256sum "$(basename "$database_target")" "$(basename "$storage_target")"
+    ) > "$manifest_target"
+    echo "[$(date -u +%FT%TZ)] Backup complete: ${database_target}, ${storage_target}"
   else
-    rm -f "$temp"
+    rm -f "$database_temp" "$storage_temp"
     echo "[$(date -u +%FT%TZ)] Backup failed" >&2
   fi
-  find /backups -type f \( -name 'jaringanku-*.dump' -o -name 'jaringanku-*.dump.sha256' \) -mtime "+$RETENTION" -delete || true
+  find /backups -type f \( -name 'jaringanku-*.dump' -o -name 'jaringanku-*.storage.tar.gz' -o -name 'jaringanku-*.manifest.sha256' \) -mtime "+$RETENTION" -delete || true
   sleep "$INTERVAL"
 done

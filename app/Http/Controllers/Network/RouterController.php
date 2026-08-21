@@ -7,6 +7,7 @@ use App\Models\Router;
 use App\Services\MikrotikRestClient;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Throwable;
 
 class RouterController extends Controller
@@ -16,6 +17,8 @@ class RouterController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'host' => ['required', 'string', 'max:255'],
+            'api_driver' => ['required', Rule::in(['api', 'api_ssl', 'rest'])],
+            'api_port' => ['required', 'integer', 'between:1,65535'],
             'rest_port' => ['required', 'integer', 'between:1,65535'],
             'api_username' => ['required', 'string', 'max:120'],
             'api_password' => ['required', 'string', 'max:255'],
@@ -24,12 +27,13 @@ class RouterController extends Controller
 
         Router::create($data);
 
-        return back()->with('success', 'Router berhasil ditambahkan.');
+        return back()->with('success', 'Router berhasil ditambahkan. Gunakan tombol Test untuk memvalidasi koneksi RouterOS.');
     }
 
     public function test(Router $router, MikrotikRestClient $client): RedirectResponse
     {
         $this->ensureTenantOwnership($router);
+
         try {
             $resource = $client->systemResource($router);
             $router->update([
@@ -40,7 +44,7 @@ class RouterController extends Controller
                 'last_error' => null,
             ]);
 
-            return back()->with('success', 'Koneksi MikroTik berhasil.');
+            return back()->with('success', 'Koneksi MikroTik berhasil melalui '.$client->driverLabel($router).'.');
         } catch (Throwable $e) {
             $router->update([
                 'status' => 'offline',
@@ -55,6 +59,7 @@ class RouterController extends Controller
     {
         $this->ensureTenantOwnership($router);
         $router->delete();
+
         return back()->with('success', 'Router dihapus.');
     }
 }

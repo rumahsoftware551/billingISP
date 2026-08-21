@@ -24,6 +24,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Billing\BillingController;
 use App\Http\Controllers\Billing\InvoiceController;
 use App\Http\Controllers\Billing\PaymentController;
+use App\Http\Controllers\Billing\ReceiptController;
 use App\Http\Controllers\Billing\PaymentGatewayController;
 use App\Http\Controllers\Integrations\IntegrationsController;
 use App\Http\Controllers\Network\IpPoolController;
@@ -210,7 +211,7 @@ Route::middleware(['auth', 'tenant', 'subscription'])->group(function () {
 
     Route::get('/network', NetworkController::class)->middleware('permission:network.view')->name('network.index');
     Route::post('/network/routers', [RouterController::class, 'store'])->middleware(['subscription.limit:routers','permission:network.manage'])->name('network.routers.store');
-    Route::post('/network/routers/{router}/test', [RouterController::class, 'test'])->middleware('permission:network.manage')->name('network.routers.test');
+    Route::post('/network/routers/{router}/test', [RouterController::class, 'test'])->middleware(['permission:network.manage','throttle:6,1'])->name('network.routers.test');
     Route::delete('/network/routers/{router}', [RouterController::class, 'destroy'])->middleware('permission:network.manage')->name('network.routers.destroy');
     Route::post('/network/nas', [NasController::class, 'store'])->middleware('permission:network.manage')->name('network.nas.store');
     Route::post('/network/nas/{nas}/sync', [NasController::class, 'sync'])->middleware('permission:network.manage')->name('network.nas.sync');
@@ -219,15 +220,17 @@ Route::middleware(['auth', 'tenant', 'subscription'])->group(function () {
     Route::delete('/network/plans/{plan}', [PlanController::class, 'destroy'])->middleware('permission:network.manage')->name('network.plans.destroy');
     Route::post('/network/pools', [IpPoolController::class, 'store'])->middleware('permission:network.manage')->name('network.pools.store');
     Route::delete('/network/pools/{pool}', [IpPoolController::class, 'destroy'])->middleware('permission:network.manage')->name('network.pools.destroy');
-    Route::post('/network/radius/test', RadiusTestController::class)->middleware('permission:network.manage')->name('network.radius.test');
+    Route::post('/network/radius/test', RadiusTestController::class)->middleware(['permission:network.manage','throttle:6,1'])->name('network.radius.test');
 
     Route::get('/network/sessions', [SessionController::class, 'index'])->middleware('permission:network.view')->name('network.sessions.index');
-    Route::post('/network/sessions/{session}/disconnect', [SessionController::class, 'disconnect'])->middleware('permission:network.manage')->name('network.sessions.disconnect');
-    Route::post('/network/sessions/{session}/coa', [SessionController::class, 'coa'])->middleware('permission:network.manage')->name('network.sessions.coa');
+    Route::post('/network/sessions/{session}/disconnect', [SessionController::class, 'disconnect'])->middleware(['permission:network.manage','throttle:12,1'])->name('network.sessions.disconnect');
+    Route::post('/network/sessions/{session}/coa', [SessionController::class, 'coa'])->middleware(['permission:network.manage','throttle:12,1'])->name('network.sessions.coa');
 
     Route::get('/billing', [BillingController::class, 'index'])->middleware('permission:billing.view')->name('billing.index');
     Route::post('/billing/run', [BillingController::class, 'run'])->middleware('permission:billing.manage')->name('billing.run');
     Route::get('/billing/invoices/{invoice}', [InvoiceController::class, 'show'])->middleware('permission:billing.view')->name('billing.invoices.show');
+    Route::get('/billing/invoices/{invoice}/download', [InvoiceController::class, 'download'])->middleware('permission:billing.view')->name('billing.invoices.download');
+    Route::get('/billing/payments/{payment}/receipt', [ReceiptController::class, 'download'])->middleware('permission:billing.view')->name('billing.payments.receipt');
     Route::post('/billing/invoices/{invoice}/payments', [PaymentController::class, 'store'])->middleware('permission:billing.manage')->name('billing.invoices.payments.store');
     Route::post('/billing/invoices/{invoice}/gateway', [PaymentGatewayController::class, 'store'])->middleware('permission:billing.manage')->name('billing.invoices.gateway.store');
     Route::get('/billing/gateway-transactions/{transaction}/mock', [PaymentGatewayController::class, 'mock'])->middleware('permission:billing.manage')->name('billing.gateway.mock');

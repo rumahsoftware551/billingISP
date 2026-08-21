@@ -1,23 +1,23 @@
 {
-  "phase": 16,
-  "name": "Commercial Readiness — UX Rebuild, Portal Repair, Branding, Payment & User Management",
-  "slug": "phase-16-commercial-readiness",
-  "version": "16.0.2",
-  "product_version": "1.2.0-dev",
-  "release_channel": "development",
-  "cumulative_from": "Jaringanku Phase 15 FULL V1",
-  "features": [
-    "modern admin shell and clearer Indonesian form labels",
-    "central Access Center for Admin, Customer, Partner, and Inventory portals",
-    "placeholder portal URL repair to prevent common tenant/login 404 flow",
-    "tenant branding with custom app name, logo, login logo, favicon, invoice logo, colors, and support identity",
-    "custom payment methods with QRIS image upload, bank/e-wallet/cash/custom instructions, visibility, limits, and admin fee metadata",
-    "customer manual payment proof upload and admin approval/rejection workflow",
-    "custom tenant user management with roles, statuses, password reset, and permission matrix",
-    "permission middleware enforcement for operational write routes",
-    "Phase 13 partner and Phase 14 inventory portal readiness regression",
-    "Phase 04-16 cumulative local regression gate"
-  ],
-  "artifact_revision": "FULL-V3",
-  "hotfix": "Windows PowerShell native STDERR handling fixed: successful Docker Compose progress output no longer aborts local-up.ps1 as NativeCommandError; Phase 15 cumulative baseline compatibility from V2 retained."
+    "phase":  17,
+    "name":  "V1.3.0 RC4 RouterOS Compatibility",
+    "slug":  "phase-17-v1-3-release-candidate",
+    "version":  "17.0.0-rc1",
+    "product_version":  "1.3.0-rc8",
+    "release_channel":  "release-candidate",
+    "cumulative_from":  "Jaringanku V1.3 Phase 01-04 Commercial Candidate",
+    "features":  [
+                     "modern admin shell and clearer Indonesian form labels",
+                     "central Access Center for Admin, Customer, Partner, and Inventory portals",
+                     "placeholder portal URL repair to prevent common tenant/login 404 flow",
+                     "tenant branding with custom app name, logo, login logo, favicon, invoice logo, colors, and support identity",
+                     "custom payment methods with QRIS image upload, bank/e-wallet/cash/custom instructions, visibility, limits, and admin fee metadata",
+                     "customer manual payment proof upload and admin approval/rejection workflow",
+                     "custom tenant user management with roles, statuses, password reset, and permission matrix",
+                     "permission middleware enforcement for operational write routes",
+                     "Phase 13 partner and Phase 14 inventory portal readiness regression",
+                     "Phase 04-16 cumulative local regression gate"
+                 ],
+    "artifact_revision":  "FULL-V3",
+    "hotfix":  "Windows PowerShell native STDERR handling fixed: successful Docker Compose progress output no longer aborts local-up.ps1 as NativeCommandError; Phase 15 cumulative baseline compatibility from V2 retained."
 }

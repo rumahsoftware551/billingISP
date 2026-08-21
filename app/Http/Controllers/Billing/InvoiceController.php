@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Billing;
 
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
+use App\Services\PortalDocumentService;
+use Illuminate\Http\Response as HttpResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -30,6 +32,17 @@ class InvoiceController extends Controller
                 'provider' => $gateway->provider,
                 'environment' => $gateway->environment,
             ] : ['enabled' => false, 'provider' => null, 'environment' => null],
+        ]);
+    }
+
+    public function download(Invoice $invoice, PortalDocumentService $documents): HttpResponse
+    {
+        $this->ensureTenantOwnership($invoice);
+
+        return response($documents->invoicePdf($invoice), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="invoice-'.$invoice->invoice_number.'.pdf"',
+            'Cache-Control' => 'private, no-store',
         ]);
     }
 }

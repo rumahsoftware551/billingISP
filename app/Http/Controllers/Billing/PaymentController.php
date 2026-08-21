@@ -22,6 +22,7 @@ class PaymentController extends Controller
             'reference' => ['nullable', 'string', 'max:160'],
             'paid_at' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'idempotency_key' => ['required', 'string', 'min:16', 'max:128'],
         ]);
 
         $payment = $payments->postToInvoice(
@@ -32,14 +33,19 @@ class PaymentController extends Controller
             $data['paid_at'] ?? now(),
             $data['notes'] ?? null,
             auth()->id(),
+            idempotencyKey: $data['idempotency_key'],
+            source: 'admin_payment',
         );
 
-        $notifications->paymentReceived($invoice->fresh(['customer']), $payment);
+        if (! $payment->getAttribute('idempotency_replayed')) {
+            $notifications->paymentReceived($invoice->fresh(['customer']), $payment);
+        }
 
         $message = sprintf(
-            'Pembayaran %s sebesar Rp%s berhasil diposting.',
+            'Pembayaran %s sebesar Rp%s %s.',
             $payment->payment_number,
-            number_format($payment->amount, 0, ',', '.')
+            number_format($payment->amount, 0, ',', '.'),
+            $payment->getAttribute('idempotency_replayed') ? 'sudah pernah diposting' : 'berhasil diposting'
         );
 
         $automationAction = $payment->getAttribute('automation_action');

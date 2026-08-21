@@ -114,18 +114,44 @@ Artisan::command('jaringanku:accounting-smoke {--leave-open : Leave the syntheti
     return 0;
 })->purpose('Send Start/Interim/Stop packets through FreeRADIUS and verify radacct.');
 
-Artisan::command('jaringanku:radius-resync', function () {
+Artisan::command('jaringanku:radius-resync {--tenant= : Optional tenant slug}', function () {
     $projection = app(\App\Services\RadiusProjectionService::class);
+
+    $tenantQuery = \App\Models\Tenant::query();
+
+    if ($slug = $this->option('tenant')) {
+        $tenantQuery->where('slug', $slug);
+    }
+
+    $tenants = $tenantQuery->orderBy('id')->get();
+
+    if ($tenants->isEmpty()) {
+        $this->error('Tenant tidak ditemukan.');
+        return 2;
+    }
+
     $count = 0;
-    \App\Models\CustomerService::query()
-        ->where('status', 'active')
-        ->orderBy('id')
-        ->chunkById(100, function ($services) use ($projection, &$count) {
-            foreach ($services as $service) {
-                $projection->syncService($service);
-                $count++;
-            }
-        });
+
+    try {
+        foreach ($tenants as $tenant) {
+            app()->instance(
+                \App\Support\CurrentTenant::class,
+                new \App\Support\CurrentTenant($tenant)
+            );
+
+            \App\Models\CustomerService::query()
+                ->where('status', 'active')
+                ->orderBy('id')
+                ->chunkById(100, function ($services) use ($projection, &$count) {
+                    foreach ($services as $service) {
+                        $projection->syncService($service);
+                        $count++;
+                    }
+                });
+        }
+    } finally {
+        app()->forgetInstance(\App\Support\CurrentTenant::class);
+    }
 
     $this->info("RADIUS projection resynced for {$count} active service(s).");
     return 0;
@@ -164,6 +190,87 @@ Artisan::command('jaringanku:billing-run {period? : Billing period in YYYY-MM} {
 
     return 0;
 })->purpose('Generate monthly invoices idempotently for one or all tenants.');
+
+Artisan::command('jaringanku:billing-due-run {date? : As-of date in YYYY-MM-DD} {--tenant= : Optional tenant slug}', function () {
+    $dateArg = $this->argument('date') ?: now()->format('Y-m-d');
+
+    try {
+        $asOf = \Carbon\CarbonImmutable::createFromFormat('!Y-m-d', $dateArg)->startOfDay();
+    } catch (\Throwable) {
+        $this->error('Format tanggal harus YYYY-MM-DD.');
+        return 1;
+    }
+
+    if ($asOf->format('Y-m-d') !== $dateArg) {
+        $this->error('Format tanggal harus YYYY-MM-DD.');
+        return 1;
+    }
+
+    $query = \App\Models\Tenant::query();
+    if ($slug = $this->option('tenant')) {
+        $query->where('slug', $slug);
+    }
+
+    $tenants = $query->get();
+    if ($tenants->isEmpty()) {
+        $this->error('Tenant tidak ditemukan.');
+        return 2;
+    }
+
+    $exit = 0;
+    foreach ($tenants as $tenant) {
+        $run = app(\App\Services\BillingEngine::class)->runDueForTenant($tenant, $asOf, null);
+        $this->info(sprintf(
+            '%s %s: eligible=%d created=%d existing=%d errors=%d',
+            $tenant->slug,
+            $asOf->format('Y-m-d'),
+            $run->eligible_count,
+            $run->created_count,
+            $run->skipped_count,
+            $run->error_count
+        ));
+
+        if ($run->error_count > 0) {
+            $exit = 3;
+        }
+    }
+
+    return $exit;
+})->purpose('Generate recurring invoices only for active services whose billing day is due, with catch-up after scheduler downtime.');
+
+Artisan::command('jaringanku:payment-reconcile {--tenant= : Optional tenant slug} {--check : Detect mismatches without repairing}', function () {
+    $query = \App\Models\Tenant::query();
+    if ($slug = $this->option('tenant')) {
+        $query->where('slug', $slug);
+    }
+
+    $tenants = $query->get();
+    if ($tenants->isEmpty()) {
+        $this->error('Tenant tidak ditemukan.');
+        return 2;
+    }
+
+    $repair = ! (bool) $this->option('check');
+    $exit = 0;
+
+    foreach ($tenants as $tenant) {
+        $stats = app(\App\Services\PaymentReconciliationService::class)->reconcileTenant($tenant, $repair);
+        $this->line(sprintf(
+            '%s: scanned=%d mismatches=%d repaired=%d violations=%d',
+            $tenant->slug,
+            $stats['scanned'],
+            $stats['mismatches'],
+            $stats['repaired'],
+            $stats['violations']
+        ));
+
+        if ($stats['violations'] > 0 || (! $repair && $stats['mismatches'] > 0)) {
+            $exit = 3;
+        }
+    }
+
+    return $exit;
+})->purpose('Reconcile invoice paid/balance/status fields from posted payment allocations.');
 
 Artisan::command('jaringanku:billing-refresh', function () {
     $total = 0;
@@ -811,6 +918,8 @@ Artisan::command('jaringanku:phase10-smoke', function () {
 })->purpose('Validate customer portal account, tenant scoping, PDF, routes, and PWA assets.');
 
 \Illuminate\Support\Facades\Schedule::command('jaringanku:billing-refresh')->dailyAt('00:10')->withoutOverlapping();
+\Illuminate\Support\Facades\Schedule::command('jaringanku:payment-reconcile')->dailyAt('00:15')->withoutOverlapping();
+\Illuminate\Support\Facades\Schedule::command('jaringanku:billing-due-run')->dailyAt('00:20')->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('jaringanku:automation-run')->everyTenMinutes()->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('jaringanku:payment-expire')->everyFiveMinutes()->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('jaringanku:payment-reminders')->dailyAt('09:00')->withoutOverlapping();
@@ -819,3 +928,5 @@ Artisan::command('jaringanku:phase10-smoke', function () {
 
 \Illuminate\Support\Facades\Schedule::command('jaringanku:saas-sweep')->hourly()->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('jaringanku:partner-monthly-commission')->monthlyOn(1, '01:20')->withoutOverlapping();
+\Illuminate\Support\Facades\Schedule::command('jaringanku:network-health --probe-routers')->everyFiveMinutes()->withoutOverlapping();
+\Illuminate\Support\Facades\Schedule::command('jaringanku:network-action-retry')->everyMinute()->withoutOverlapping();
