@@ -21,7 +21,7 @@ class BillingAutomationService
     public function __construct(
         private readonly BillingEngine $billing,
         private readonly RadiusProjectionService $radius,
-        private readonly RadiusCoaService $coa,
+        private readonly NetworkActionOutboxService $networkActions,
         private readonly BillingCalendar $calendar,
     ) {}
 
@@ -290,9 +290,10 @@ class BillingAutomationService
             return $suspension;
         }, 3);
 
-        $disconnect = ['attempted' => 0, 'succeeded' => 0, 'failed' => 0, 'errors' => []];
+        $disconnect = ['queued' => false, 'attempted' => 0, 'succeeded' => 0, 'failed' => 0, 'errors' => []];
         if ($policy->disconnect_on_suspend) {
-            $disconnect = $this->coa->disconnectAllForService($service->fresh(), $actorUserId);
+            $action = $this->networkActions->queueDisconnect($service->fresh(), $suspension, $run, $source, $actorUserId);
+            $disconnect = ['queued' => true, 'outbox_id' => $action->id, 'attempted' => 0, 'succeeded' => 0, 'failed' => 0, 'errors' => []];
         }
 
         $this->event(
@@ -302,7 +303,7 @@ class BillingAutomationService
             null,
             'service_suspended',
             $disconnect['failed'] === 0,
-            sprintf('Layanan diisolir. Disconnect session: %d berhasil, %d gagal.', $disconnect['succeeded'], $disconnect['failed']),
+            $disconnect['queued'] ? 'Layanan diisolir; disconnect session dijadwalkan melalui outbox jaringan.' : 'Layanan diisolir tanpa disconnect session.',
             ['source' => $source, 'suspension_id' => $suspension->id, 'disconnect' => $disconnect]
         );
 
@@ -342,9 +343,16 @@ class BillingAutomationService
             $this->radius->syncService($service);
         }
 
-        $disconnect = ['attempted' => 0, 'succeeded' => 0, 'failed' => 0, 'errors' => []];
+        $disconnect = ['queued' => false, 'attempted' => 0, 'succeeded' => 0, 'failed' => 0, 'errors' => []];
         if ($policy->disconnect_on_suspend && $hasOnlineSession) {
-            $disconnect = $this->coa->disconnectAllForService($service, $actorUserId);
+            $suspension = ServiceSuspension::query()
+                ->where('customer_service_id', $service->id)
+                ->where('source', 'billing_automation')
+                ->where('status', 'active')
+                ->latest('id')
+                ->firstOrFail();
+            $action = $this->networkActions->queueDisconnect($service, $suspension, $run, $source, $actorUserId);
+            $disconnect = ['queued' => true, 'outbox_id' => $action->id, 'attempted' => 0, 'succeeded' => 0, 'failed' => 0, 'errors' => []];
         }
 
         $this->event(
@@ -354,7 +362,7 @@ class BillingAutomationService
             null,
             'suspension_enforced',
             $disconnect['failed'] === 0,
-            sprintf('Isolir ditegakkan ulang. Disconnect: %d berhasil, %d gagal.', $disconnect['succeeded'], $disconnect['failed']),
+            $disconnect['queued'] ? 'Isolir ditegakkan ulang; disconnect session dijadwalkan melalui outbox jaringan.' : 'Isolir ditegakkan ulang tanpa disconnect session.',
             ['source' => $source, 'projection_repaired' => (! $hasRejectProjection || $hasLeakedActiveProjection), 'disconnect' => $disconnect]
         );
 

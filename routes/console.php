@@ -929,3 +929,4 @@ Artisan::command('jaringanku:phase10-smoke', function () {
 \Illuminate\Support\Facades\Schedule::command('jaringanku:saas-sweep')->hourly()->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('jaringanku:partner-monthly-commission')->monthlyOn(1, '01:20')->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('jaringanku:network-health --probe-routers')->everyFiveMinutes()->withoutOverlapping();
+\Illuminate\Support\Facades\Schedule::command('jaringanku:network-action-retry')->everyMinute()->withoutOverlapping();
