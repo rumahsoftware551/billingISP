@@ -220,6 +220,11 @@ class ReleaseAcceptanceService
         $private=(bool)config('jaringanku.webhook_allow_private_networks'); $http=(bool)config('jaringanku.webhook_allow_insecure_http');
         $unsafe=$private||$http;
         $this->add('runtime.webhook_ssrf','hardening',$unsafe?($shouldFail?'fail':'warn'):'pass','high','Webhook production SSRF controls are strict',"allow_private=".($private?'true':'false')."; allow_http=".($http?'true':'false'),'Disable private-network and insecure HTTP webhook targets in production.');
+        $mikrotikCidrs=array_values(array_filter(array_map('trim',explode(',',implode(',',(array)config('jaringanku.mikrotik_allowed_cidrs',[]))))));
+        $invalidCidrs=array_values(array_filter($mikrotikCidrs,function($cidr){[$network,$prefix]=array_pad(explode('/',$cidr,2),2,null);$limit=str_contains((string)$network,':')?128:32;return $prefix===null||filter_var($network,FILTER_VALIDATE_IP)===false||!ctype_digit($prefix)||(int)$prefix<0||(int)$prefix>$limit;}));
+        $broadMikrotik=array_values(array_filter($mikrotikCidrs,fn($cidr)=>in_array($cidr,['0.0.0.0/0','::/0'],true)));
+        $mikrotikSafe=$mikrotikCidrs!==[]&&$invalidCidrs===[]&&$broadMikrotik===[];
+        $this->add('runtime.mikrotik_egress_allowlist','hardening',$mikrotikSafe?'pass':($shouldFail?'fail':'warn'),'critical','MikroTik REST targets are restricted to an explicit CIDR allowlist','configured='.implode(',',$mikrotikCidrs).'; invalid='.implode(',',$invalidCidrs).'; broad='.implode(',',$broadMikrotik),'Set MIKROTIK_ALLOWED_CIDRS to the exact router ranges. Do not use 0.0.0.0/0 or ::/0.');
     }
 
     private function checkSourceManifest(): void

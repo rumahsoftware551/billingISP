@@ -55,7 +55,18 @@ WEBHOOK_ALLOW_PRIVATE_NETWORKS=false
 WEBHOOK_ALLOW_INSECURE_HTTP=false
 ```
 
-This blocks normal private/reserved IPv4 targets and requires HTTPS. Only enable private targets when you intentionally operate trusted internal integrations.
+This blocks private/reserved IPv4 and IPv6 targets and requires HTTPS. Hostname deliveries are pinned to the addresses that passed validation, and HTTP redirects are disabled. Only enable private targets when you intentionally operate trusted internal integrations.
+
+## MikroTik outbound target policy
+
+RouterOS REST credentials can be used to reach privileged network resources. In production, configure the exact private/public ranges that contain your routers before adding them in the application:
+
+```env
+MIKROTIK_ALLOWED_CIDRS=192.168.88.0/24,10.20.0.0/16
+MIKROTIK_REQUIRE_TLS=true
+```
+
+The application resolves each router hostname and rejects every resolved address that is outside this allowlist. Hostname connections are pinned to the validated addresses for the request and redirects are disabled, reducing DNS-rebinding and redirect-based SSRF risk. Do not use `0.0.0.0/0` or `::/0`.
 
 ## Health endpoints
 

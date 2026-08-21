@@ -43,7 +43,7 @@ class DeliverWebhookJob implements ShouldQueue
             return;
         }
 
-        $urlPolicy->validateOrFail((string) $endpoint->url);
+        $target = $urlPolicy->validateOrFail((string) $endpoint->url);
 
         $attempt = (int) $delivery->attempts + 1;
         $delivery->forceFill(['status' => 'sending', 'attempts' => $attempt, 'last_error' => null])->save();
@@ -53,8 +53,9 @@ class DeliverWebhookJob implements ShouldQueue
         $signature = 'sha256='.hash_hmac('sha256', $timestamp.'.'.$json, (string) $endpoint->secret);
 
         try {
-            $response = Http::asJson()
+            $request = Http::asJson()
                 ->acceptJson()
+                ->withoutRedirecting()
                 ->timeout(max(1, min(30, (int) $endpoint->timeout_seconds)))
                 ->withUserAgent((string) config('jaringanku.webhook_user_agent'))
                 ->withHeaders(array_filter([
@@ -64,8 +65,14 @@ class DeliverWebhookJob implements ShouldQueue
                     'X-Jaringanku-Signature' => $signature,
                     'X-Phase08-Smoke-Token' => app()->environment('local') ? config('jaringanku.phase08_smoke_token') : null,
                 ], fn ($value) => $value !== null && $value !== ''))
-                ->withBody($json, 'application/json')
-                ->send('POST', (string) $endpoint->url);
+                ->withBody($json, 'application/json');
+
+            $resolve = $urlPolicy->curlResolveEntries($target);
+            if ($resolve !== []) {
+                $request = $request->withOptions(['curl' => [CURLOPT_RESOLVE => $resolve]]);
+            }
+
+            $response = $request->send('POST', (string) $endpoint->url);
         } catch (Throwable $e) {
             $delivery->forceFill(['last_error' => mb_substr($e->getMessage(), 0, 4000)])->save();
             if ($attempt >= max(1, (int) $endpoint->max_attempts)) {
