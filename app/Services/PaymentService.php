@@ -27,13 +27,20 @@ class PaymentService
         ?string $notes,
         ?int $actorUserId,
         ?int $partnerId = null,
-        ?int $partnerAccountId = null
+        ?int $partnerAccountId = null,
+        ?string $idempotencyKey = null,
+        ?callable $afterPost = null,
     ): Payment {
         if ($amount <= 0) {
             throw ValidationException::withMessages(['amount' => 'Nominal pembayaran harus lebih dari 0.']);
         }
 
-        $payment = DB::transaction(function () use ($invoice, $amount, $method, $reference, $paidAt, $notes, $actorUserId, $partnerId, $partnerAccountId) {
+        $idempotencyKey = filled($idempotencyKey) ? trim((string) $idempotencyKey) : null;
+        if ($idempotencyKey && mb_strlen($idempotencyKey) > 120) {
+            throw ValidationException::withMessages(['idempotency_key' => 'Idempotency key maksimal 120 karakter.']);
+        }
+
+        [$payment, $replayed] = DB::transaction(function () use ($invoice, $amount, $method, $reference, $paidAt, $notes, $actorUserId, $partnerId, $partnerAccountId, $idempotencyKey, $afterPost) {
             $locked = Invoice::query()->whereKey($invoice->id)->lockForUpdate()->firstOrFail();
             if (in_array($locked->status, ['void'], true)) {
                 throw ValidationException::withMessages(['amount' => 'Invoice void tidak dapat dibayar.']);
@@ -46,6 +53,29 @@ class PaymentService
             }
 
             $tenantId = (string) $locked->tenant_id;
+
+            if ($idempotencyKey) {
+                $existing = Payment::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('idempotency_key', $idempotencyKey)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($existing) {
+                    $allocation = $existing->allocations()
+                        ->where('invoice_id', $locked->id)
+                        ->first();
+
+                    if (! $allocation || (int) $existing->amount !== $amount || (int) $allocation->amount !== $amount || $existing->method !== $method) {
+                        throw ValidationException::withMessages([
+                            'idempotency_key' => 'Idempotency key sudah digunakan untuk pembayaran yang berbeda.',
+                        ]);
+                    }
+
+                    return [$existing->load(['customer', 'allocations.invoice']), true];
+                }
+            }
+
             $paidAtCarbon = $paidAt ? \Carbon\CarbonImmutable::parse($paidAt) : now()->toImmutable();
             $paymentNumber = $this->sequences->next(
                 $tenantId,
@@ -57,6 +87,7 @@ class PaymentService
             $resolvedPartnerId = $partnerId ?: $locked->customer()->value('partner_id');
 
             $payment = Payment::create([
+                'tenant_id' => $tenantId,
                 'customer_id' => $locked->customer_id,
                 'partner_id' => $resolvedPartnerId,
                 'partner_account_id' => $partnerAccountId,
@@ -64,6 +95,7 @@ class PaymentService
                 'amount' => $amount,
                 'method' => $method,
                 'reference' => $reference,
+                'idempotency_key' => $idempotencyKey,
                 'paid_at' => $paidAtCarbon,
                 'status' => 'posted',
                 'notes' => $notes,
@@ -91,8 +123,18 @@ class PaymentService
             $locked->status = $this->billing->statusFor($locked);
             $locked->save();
 
-            return $payment->load(['customer', 'allocations.invoice']);
+            if ($afterPost) {
+                $afterPost($payment, $locked);
+            }
+
+            return [$payment->load(['customer', 'allocations.invoice']), false];
         }, 3);
+
+        if ($replayed) {
+            $payment->setAttribute('idempotency_replayed', true);
+
+            return $payment;
+        }
 
         // A valid payment must remain posted even if a network-side automation action fails.
         // The scheduled automation runner will retry later.
@@ -124,4 +166,3 @@ class PaymentService
         return $payment;
     }
 }
-

@@ -56,65 +56,78 @@ class ManualPaymentProofController extends Controller
             'review_note' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $result = DB::transaction(function () use ($proof, $data, $payments) {
-            /** @var ManualPaymentProof $locked */
-            $locked = ManualPaymentProof::query()->whereKey($proof->id)->lockForUpdate()->firstOrFail();
-            $this->ensureTenantOwnership($locked);
-            $locked->load(['invoice', 'method']);
+        if ($data['action'] === 'reject') {
+            DB::transaction(function () use ($proof, $data) {
+                /** @var ManualPaymentProof $locked */
+                $locked = ManualPaymentProof::query()->whereKey($proof->id)->lockForUpdate()->firstOrFail();
+                $this->ensureTenantOwnership($locked);
 
-            if ($locked->status !== 'pending') {
-                throw ValidationException::withMessages(['action' => 'Bukti pembayaran ini sudah direview oleh user lain.']);
-            }
+                if ($locked->status !== 'pending') {
+                    throw ValidationException::withMessages(['action' => 'Bukti pembayaran ini sudah direview oleh user lain.']);
+                }
 
-            if ($data['action'] === 'reject') {
                 $locked->forceFill([
                     'status' => 'rejected',
                     'review_note' => $data['review_note'] ?? null,
                     'reviewed_by' => auth()->id(),
                     'reviewed_at' => now(),
                 ])->save();
+            }, 3);
 
-                return ['action' => 'rejected', 'proof' => $locked, 'payment' => null];
-            }
-
-            if (! $locked->invoice || (int) $locked->invoice->balance_due < (int) $locked->amount) {
-                throw ValidationException::withMessages([
-                    'action' => 'Nominal bukti melebihi sisa invoice atau invoice sudah berubah. Review manual diperlukan.',
-                ]);
-            }
-
-            $methodCode = 'manual:'.($locked->method?->code ?: 'custom');
-            $payment = $payments->postToInvoice(
-                $locked->invoice,
-                (int) $locked->amount,
-                $methodCode,
-                $locked->reference,
-                now(),
-                'Approved from portal proof #'.$locked->id.(($data['review_note'] ?? null) ? ' · '.$data['review_note'] : ''),
-                auth()->id()
-            );
-
-            $locked->forceFill([
-                'status' => 'approved',
-                'review_note' => $data['review_note'] ?? null,
-                'reviewed_by' => auth()->id(),
-                'reviewed_at' => now(),
-                'payment_id' => $payment->id,
-            ])->save();
-
-            return ['action' => 'approved', 'proof' => $locked, 'payment' => $payment];
-        }, 3);
-
-        if ($result['action'] === 'rejected') {
             return back()->with('success', 'Bukti pembayaran ditolak.');
         }
 
-        $freshInvoice = $result['proof']->invoice?->fresh(['customer']);
-        if ($freshInvoice) {
-            $notifications->paymentReceived($freshInvoice, $result['payment']);
+        $proof->load(['invoice', 'method']);
+        if ($proof->status !== 'pending') {
+            throw ValidationException::withMessages(['action' => 'Bukti pembayaran ini sudah direview oleh user lain.']);
         }
 
-        return back()->with('success', 'Bukti disetujui dan pembayaran '.$result['payment']->payment_number.' berhasil diposting.');
+        if (! $proof->invoice || (int) $proof->invoice->balance_due < (int) $proof->amount) {
+            throw ValidationException::withMessages([
+                'action' => 'Nominal bukti melebihi sisa invoice atau invoice sudah berubah. Review manual diperlukan.',
+            ]);
+        }
+
+        $payment = $payments->postToInvoice(
+            $proof->invoice,
+            (int) $proof->amount,
+            'manual:'.($proof->method?->code ?: 'custom'),
+            $proof->reference,
+            now(),
+            'Approved from portal proof #'.$proof->id.(($data['review_note'] ?? null) ? ' · '.$data['review_note'] : ''),
+            auth()->id(),
+            null,
+            null,
+            'manual-proof:'.$proof->id,
+            function ($postedPayment, $lockedInvoice) use ($proof, $data): void {
+                /** @var ManualPaymentProof $locked */
+                $locked = ManualPaymentProof::query()->whereKey($proof->id)->lockForUpdate()->firstOrFail();
+                $this->ensureTenantOwnership($locked);
+
+                if ($locked->status !== 'pending' || (int) $locked->invoice_id !== (int) $lockedInvoice->id) {
+                    throw ValidationException::withMessages(['action' => 'Bukti pembayaran ini sudah direview atau invoice-nya berubah.']);
+                }
+
+                $locked->forceFill([
+                    'status' => 'approved',
+                    'review_note' => $data['review_note'] ?? null,
+                    'reviewed_by' => auth()->id(),
+                    'reviewed_at' => now(),
+                    'payment_id' => $postedPayment->id,
+                ])->save();
+            },
+        );
+
+        if ($payment->getAttribute('idempotency_replayed')) {
+            return back()->with('error', 'Bukti pembayaran ini sudah diproses sebelumnya.');
+        }
+
+        $freshInvoice = $proof->invoice->fresh(['customer']);
+        if ($freshInvoice) {
+            $notifications->paymentReceived($freshInvoice, $payment);
+        }
+
+        return back()->with('success', 'Bukti disetujui dan pembayaran '.$payment->payment_number.' berhasil diposting.');
     }
 
     public function file(ManualPaymentProof $proof): StreamedResponse
