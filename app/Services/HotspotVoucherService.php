@@ -165,12 +165,28 @@ class HotspotVoucherService
     public function reconcileCurrentTenant(bool $resyncAll = false): array
     {
         $counts = ['activated' => 0, 'expired' => 0, 'failed' => 0];
+        $now = now();
+        $expiredIds = HotspotVoucher::query()
+            ->where(function ($query) use ($now): void {
+                $query->where(function ($active) use ($now): void {
+                    $active->where('status', 'active')
+                        ->whereNotNull('expires_at')
+                        ->where('expires_at', '<=', $now);
+                })->orWhere(function ($sold) use ($now): void {
+                    $sold->where('status', 'sold')
+                        ->whereNull('activated_at')
+                        ->whereNotNull('activation_deadline_at')
+                        ->where('activation_deadline_at', '<=', $now);
+                });
+            })
+            ->pluck('id')
+            ->flip();
 
         HotspotVoucher::query()
             ->with('profile')
             ->whereIn('status', ['sold', 'active'])
             ->orderBy('id')
-            ->chunkById(200, function ($vouchers) use (&$counts, $resyncAll): void {
+            ->chunkById(200, function ($vouchers) use (&$counts, $expiredIds, $now, $resyncAll): void {
                 $starts = DB::table('radacct')
                     ->whereIn('username', $vouchers->pluck('username'))
                     ->whereNotNull('acctstarttime')
@@ -192,8 +208,8 @@ class HotspotVoucherService
                             $changed = true;
                         }
 
-                        $expired = ($voucher->activated_at && $voucher->expires_at?->isPast())
-                            || (! $voucher->activated_at && $voucher->activation_deadline_at?->isPast());
+                        $expired = $expiredIds->has($voucher->id)
+                            || ($changed && $voucher->expires_at?->lessThanOrEqualTo($now));
                         if ($expired) {
                             $voucher->forceFill(['status' => 'expired']);
                             $counts['expired']++;
