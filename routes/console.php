@@ -136,6 +136,20 @@ Artisan::command('jaringanku:radius-resync', function () {
     return $failed === 0 ? 0 : 1;
 })->purpose('Reconcile radcheck/radreply projections for all tenant services.');
 
+Artisan::command('jaringanku:hotspot-reconcile {--all : Rebuild every sold/active voucher projection}', function () {
+    $activated = 0; $expired = 0; $failed = 0;
+    foreach (\App\Models\Tenant::query()->where('status', 'active')->orderBy('id')->get() as $tenant) {
+        app()->instance(\App\Support\CurrentTenant::class, new \App\Support\CurrentTenant($tenant));
+        $result = app(\App\Services\HotspotVoucherService::class)->reconcileCurrentTenant((bool) $this->option('all'));
+        $activated += $result['activated'];
+        $expired += $result['expired'];
+        $failed += $result['failed'];
+    }
+
+    $this->info("Hotspot voucher activated={$activated} expired={$expired} failed={$failed}.");
+    return $failed === 0 ? 0 : 1;
+})->purpose('Activate vouchers from accounting, expire old vouchers, and reconcile RADIUS.');
+
 Artisan::command('jaringanku:billing-run {period? : Billing period in YYYY-MM} {--tenant= : Optional tenant slug}', function () {
     $periodArg = $this->argument('period') ?: now()->format('Y-m');
     try {
@@ -819,6 +833,8 @@ Artisan::command('jaringanku:phase10-smoke', function () {
 \Illuminate\Support\Facades\Schedule::command('jaringanku:billing-refresh')->dailyAt('00:10')->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('jaringanku:automation-run')->everyTenMinutes()->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('jaringanku:radius-resync')->everyFiveMinutes()->withoutOverlapping();
+\Illuminate\Support\Facades\Schedule::command('jaringanku:hotspot-reconcile')->everyMinute()->withoutOverlapping(10);
+\Illuminate\Support\Facades\Schedule::command('jaringanku:hotspot-reconcile --all')->dailyAt('02:40')->withoutOverlapping(120);
 \Illuminate\Support\Facades\Schedule::command('jaringanku:payment-expire')->everyFiveMinutes()->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('jaringanku:payment-reminders')->dailyAt('09:00')->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::call(function () { \Illuminate\Support\Facades\Cache::put('jaringanku:scheduler_heartbeat', now()->toIso8601String(), now()->addMinutes(5)); })->name('jaringanku-scheduler-heartbeat')->everyMinute()->withoutOverlapping();

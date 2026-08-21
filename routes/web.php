@@ -33,6 +33,7 @@ use App\Http\Controllers\Network\PlanController;
 use App\Http\Controllers\Network\RadiusTestController;
 use App\Http\Controllers\Network\RouterController;
 use App\Http\Controllers\Network\SessionController;
+use App\Http\Controllers\Network\HotspotVoucherController;
 use App\Http\Controllers\Operations\AutomationController;
 use App\Http\Controllers\Reports\ReportsController;
 use App\Http\Controllers\System\HealthController;
@@ -224,6 +225,14 @@ Route::middleware(['auth', 'tenant', 'tenant.bound', 'subscription'])->group(fun
     Route::get('/network/sessions', [SessionController::class, 'index'])->middleware('permission:network.view')->name('network.sessions.index');
     Route::post('/network/sessions/{session}/disconnect', [SessionController::class, 'disconnect'])->middleware('permission:network.manage')->name('network.sessions.disconnect');
     Route::post('/network/sessions/{session}/coa', [SessionController::class, 'coa'])->middleware('permission:network.manage')->name('network.sessions.coa');
+
+    Route::get('/hotspot', [HotspotVoucherController::class, 'index'])->middleware('permission:network.view')->name('hotspot.index');
+    Route::post('/hotspot/profiles', [HotspotVoucherController::class, 'storeProfile'])->middleware('permission:network.manage')->name('hotspot.profiles.store');
+    Route::post('/hotspot/batches', [HotspotVoucherController::class, 'storeBatch'])->middleware('permission:network.manage')->name('hotspot.batches.store');
+    Route::get('/hotspot/batches/{batch}/export', [HotspotVoucherController::class, 'export'])->middleware('permission:network.manage')->name('hotspot.batches.export');
+    Route::post('/hotspot/vouchers/{voucher}/sell', [HotspotVoucherController::class, 'sell'])->middleware('permission:network.manage')->name('hotspot.vouchers.sell');
+    Route::post('/hotspot/vouchers/{voucher}/disable', [HotspotVoucherController::class, 'disable'])->middleware('permission:network.manage')->name('hotspot.vouchers.disable');
+    Route::post('/hotspot/vouchers/{voucher}/enable', [HotspotVoucherController::class, 'enable'])->middleware('permission:network.manage')->name('hotspot.vouchers.enable');
 
     Route::get('/billing', [BillingController::class, 'index'])->middleware('permission:billing.view')->name('billing.index');
     Route::post('/billing/run', [BillingController::class, 'run'])->middleware('permission:billing.manage')->name('billing.run');

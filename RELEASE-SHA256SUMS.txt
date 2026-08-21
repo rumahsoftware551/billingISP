@@ -2,7 +2,7 @@
 2398f23f2364af3b8dec3825712ea9158bba5a95087d860ff82e2f2f61145e08  ./.env.example
 c5b712e672f58036d157ee76e305a8c5ffe67aa79b518229889746db108caa84  ./.env.local.example
 2398f23f2364af3b8dec3825712ea9158bba5a95087d860ff82e2f2f61145e08  ./.env.production.example
-4d953185a2328fafdf0f26fc9683af99063fc5c557cb6b81da8b6cb757b41750  ./.github/workflows/ci.yml
+d03d29bfd6b47dfcfb417a59cf21af63fc094fd409cc245c1b53154e1a1406b9  ./.github/workflows/ci.yml
 9e0697d847864912177a5e80257bd534a93d4e707b35a2583a47b81a9dc84f32  ./.gitignore
 8e94977894d4bbfd7fa74239ea5cb9df09520573a6da9bc1adaa7e20b41b9395  ./GO-LIVE-VALIDATION.txt
 5c283394333a4b098a8f0f5f6d9ca7295b2ee731f68a8b2f848d6f779bc88708  ./LAPORAN_AUDIT_FASE_0_JARINGANKU_2026-08-21.md
@@ -63,6 +63,7 @@ c439e6376e9e329758f7db6e6776757af40de4f0ca6071f1aac0b806379eedb2  ./app/Http/Con
 f1163bd2e18019111cba71729b82143f1e5ff65c044e534d333a3f660777cc0b  ./app/Http/Controllers/Inventory/InventoryDashboardController.php
 3d7177a20a7146c3aabe33b8a3ba3595fd891f3744f8d820c21bf1e185efc243  ./app/Http/Controllers/Inventory/InventoryPurchaseController.php
 f1d5fa605f24017f1f269765f49acf00314e2f40c775cc4833e0ec60488dfb02  ./app/Http/Controllers/Inventory/InventoryTransactionController.php
+bc63a1728894cde4b701451a6e53764e420ff559ac79f926aac74d764dbc79dc  ./app/Http/Controllers/Network/HotspotVoucherController.php
 c8faf0b47be8606634b3a46fe2ba56f3d5608e20ea091e72ead812a21db975c4  ./app/Http/Controllers/Network/IpPoolController.php
 d453c8a7ed9eb2860a4abd047d088d689762b428b9f0e0a50568f84d6b982a52  ./app/Http/Controllers/Network/NasController.php
 40fa05afd575632ea469ecf8ee452ba15a401cb883bfa046210fbac10209b05a  ./app/Http/Controllers/Network/NetworkController.php
@@ -122,6 +123,9 @@ bcf667d72d4ccd6681905dd4aa456452ce87d37c226c899e6e6d95ea43fed242  ./app/Models/C
 f66fd5eda691c1197ce8fd2ee38cf274fe46464359a62112a7ee0d0e08c563d4  ./app/Models/CustomerPortalAccount.php
 a45d621269a21c24e02c4b0c4c56f60e6d7fc9dfd2125d3348e099d0ad31a878  ./app/Models/CustomerPortalLoginEvent.php
 cd0546aaa41f5dd60480d87daacefc5d29047ecfed6475c430afde76e4924857  ./app/Models/CustomerService.php
+e41cda321524719336283bf45461729dbf02ca774cec264a8a0c8a378776fb7d  ./app/Models/HotspotProfile.php
+ed140a69231bd2c12a1464e4f2b7f4c20509915dac4fd04a2c1320990d27e7bf  ./app/Models/HotspotVoucher.php
+1758e8fdd5e057281d224b08f5291c30247aee03ff0950d541535992eaa7e885  ./app/Models/HotspotVoucherBatch.php
 de6c6ee0b73b0e072c69fd6ea2b5834f7a8a09cbdbdf82d89ce783b44a56906b  ./app/Models/InstallationJob.php
 d526c38a2dc0c764f07f91d761e6e5e458018c5a094d5f97a108950b08669941  ./app/Models/InternetPlan.php
 29d5123930ceada343aa27f915905d3668668aa98b0df68f352200792a172269  ./app/Models/InventoryBalance.php
@@ -189,6 +193,8 @@ e527a89b04bd4e1c49728bc94c363cee51637ca0464cd1cbb2ac213eec0504d2  ./app/Services
 8522ab95243e59e3333e3dd474af916deff330a39261905b3ad51a4ee233bb85  ./app/Services/BillingAutomationService.php
 df4caf86cfbba5b0ed6a34fd288ceee3b136f4f45899b3e2160c1e84352977fa  ./app/Services/BillingEngine.php
 f87e6760ecc1937c86812c46aa35b3eba5757a2a94ff9b1c54c025708c45c6c1  ./app/Services/BrandingService.php
+8fd571b95eca8431b4e7c2b480a3199dc7dc52cf8ea288bf2710fea28aebac50  ./app/Services/HotspotRadiusProjectionService.php
+68badc9d8e18bd79a88121004f17115e5f645ff8b472560bdf1e3e4c59f9d0cb  ./app/Services/HotspotVoucherService.php
 40705cea38be40819bf2b0737071efaecea866708f9ed093a9069a9bd4bf561f  ./app/Services/InventoryLedgerService.php
 d0b6ca526ed3d8883d0f8a101a8a31679ac5ff9f22fc4355df479f1fcdb937a7  ./app/Services/MikrotikRestClient.php
 0f7fc3fdf00189263cec4411881eca7b5b941ef174026e679cea5aef2f33e16a  ./app/Services/NetworkAddressPolicy.php
@@ -255,6 +261,7 @@ b119619de8e6ecaefcafbb0fd741c2ae1b30a6a50dec63cb2fb02d4b8a95a507  ./database/mig
 212d49a31aec9fe8e8d470ef5731af6e7118ea3831182b42e5143ffdb3cbb7ca  ./database/migrations/2026_08_09_400000_create_commercial_readiness_tables.php
 8547946f131af3fa89d1c8c0266b680b9784664df1d00fa217c455c4ef967bf6  ./database/migrations/2026_08_21_100000_add_payment_idempotency_key.php
 a2cc518eeab50d1d18888508729f347ac6143e1796cf8191897f2666f7f5b06d  ./database/migrations/2026_08_21_110000_enforce_critical_tenant_relationships.php
+10274c82d6964ec402437110d8abbe714dda6c077f00c39d2020a5a64328f7ec  ./database/migrations/2026_08_21_120000_create_hotspot_voucher_tables.php
 fa4991e52e89dab68947f75a618f9f909b4121b94494e24b691f8df51bd85876  ./database/seeders/DatabaseSeeder.php
 bc6195a28254aaeb1133b743963fded5203e5abd17d2f77874fb861e7d47c287  ./docker-compose.prod.yml
 b1b9019e3bc7e84b2dd1aaf5f4189c81ddd5415f3e2af2f3bf8a3302570edb94  ./docker-compose.yml
@@ -267,9 +274,9 @@ d88f192dce3a22d458259c9805162cd5af55c564d042c903b5da28256301c19f  ./docker/php/D
 65cee0f200e49c67d2f6e2c417d15de830c2f873a50f867f94279b4ab40d2201  ./docker/php/entrypoint.sh
 48e2ab45223f09482444488f837284d5e92f21e4cd09487989b3f25c47adf0af  ./docker/radius/Dockerfile
 8f2462c583715bc02b5bbf6985938a2f1689713eb75655056656ee80ab202adb  ./docker/radius/clients.base.conf
-13d3334ae003cd2a19bb52316629644145e2fc936c308b03cc6fc2e51a3013a2  ./docker/radius/default
+7d597bb9d3b9e0c7d2280dc08a77981c14eb581c0e256ffee3f2484bba8d8f70  ./docker/radius/default
 d117702bd13758e69b5d465eaeb8bd0c7c3424589fab965791cdda657e102055  ./docker/radius/entrypoint.sh
-62836ea61881faeb653e23e1d409b911110c87d9f455624f6cafcb4e67073ba2  ./docker/radius/inner-tunnel
+f80b0c5ef93943d1bf6fd7901e4f8cbf6aad3a352a8938e0a1e3c23de50c2c51  ./docker/radius/inner-tunnel
 e2cc09e3d05661e1fddffd7118b403e1d3f2843b387ee1e3ff5f227129783c61  ./docker/radius/sql.template
 4d21f38a703d8728e8ce4bd8e6f079d5387d41a30c35db333b0680e721a5e983  ./docs/ARCHITECTURE-PHASE02.md
 11c5a4e721095463f603b13c43382c70df8c7b618f66a5f6b69c786eb734a2b4  ./docs/ARCHITECTURE-PHASE03.md
@@ -282,6 +289,7 @@ dfb6992930cab6314ca0d0b78c8e5a1df59e8e3965be00995bb282acae2014a4  ./docs/CUSTOME
 2a36ec431f2f95318ca0c1ba30eedb0c09123b9e6f97a86376b62a54450c1efd  ./docs/MIKROTIK-LOCAL.md
 24e77c8dfb592330dac9bd34f010071a3bae20e20546ed6c2a5e23e85f42907f  ./docs/MIKROTIK-PHASE04-ACCOUNTING-COA.md
 623f33b894ab982141163f8245098b9b9725b7685bc35098853a8e06c6ba749e  ./docs/PAYMENT-WHATSAPP.md
+b4154ff7b72387926c926ae31a8bb11ddb84f8d90d406aa48d761f86729cc184  ./docs/PILOT-RSBILLING-10000.md
 5fd8cda22f51c3f2fea379630b803595796ee9e8363fabaf279a2e303539efc1  ./docs/PRODUCTION-DEPLOYMENT-PHASE11.md
 eb4fea277c5e8c08a74a87f64c3b0b05c55577470830cb20e7362336e8166fb2  ./docs/PRODUCTION-DEPLOYMENT.md
 ad8dccbaaff96cc63ac7abb9571dc52ff30c5de59d156f4895996c03d8046ac9  ./docs/PRODUCTION-FINAL.md
@@ -307,7 +315,7 @@ ef13bb45a68b6bfa13f1ed7c950944a9f2fe37040c53344a7389b65704c1e55d  ./docs/V1.1-ST
 45b243037e9542f638a63604aada0df64bad03cbcbe35604eb723bbf43f27401  ./docs/manual/Jaringanku-Manual-Book-Phase16-FULL-V3.pdf
 8c745ec402a991e2ae211af94c63a024562e4e5e031c26998db1697b64952906  ./docs/production/DEPLOYMENT-VPS-ID.md
 60f77fc506e4c72205cd11ab288d2b9aa386d08e4a663fda7c8c906c36da465f  ./ops/00-bootstrap-ubuntu.sh
-6bae250be4a749ebbcd29340ab299c7689ce6aa42ab2d4ca0001921929f5333c  ./ops/01-prepare-production.sh
+1c88ef9cbb4bb24e172a1e460643ba7131d221f57a072d776a8e14ed3543c0e3  ./ops/01-prepare-production.sh
 b40f161c6de08d7e0cd23e1f5f64078e02f844a0465249cd2814f42a04700bc4  ./ops/02-deploy-app.sh
 917de3ab3b4cd5f3bfc903731d6f847da27ee7928b6d5197c55e1dc485ecbd36  ./ops/03-setup-https.sh
 1c8f36ae6ab71aff48b4236feea760aa9208a045e1c28d6faa922051a7e3cabc  ./ops/04-radius-firewall.sh
@@ -324,7 +332,7 @@ ef47908cc14a329f3189ab46c812f6d88ff88454a47a7ffc9d10df2a4b975f8d  ./public/manif
 9e3f4d96b86be14ba7fc241e3b623aea9d8a8487a8a3623cfc51d8fae3e0e2ff  ./resources/css/app.css
 ff0534a4ac0c91de5afa0f29c07daeb343b47e7362c2a2e4a8b1198f1565f4dc  ./resources/js/app.tsx
 32101db8a1f6d0ea90c172d659835608af72caf58883f355c73765120c565473  ./resources/js/components/InventoryLayout.tsx
-ac58ada76c56c291a37ad2fa62dd30c0fa50d7091131d38d5c4ff4924879442e  ./resources/js/components/Layout.tsx
+c5427a8f534ca490db7a7afbbcd58e25a55ee047c4f312a6b787eca3cee35925  ./resources/js/components/Layout.tsx
 8af1d150a0a40648fcfe9254157f878e313d6f0cbd5c49243f6cb00ab90e6e87  ./resources/js/components/PartnerLayout.tsx
 2987f9a0c351af9e98cd633d74d3b26a18d057626b6f1f0cb6c2d8ec72f6356d  ./resources/js/components/PortalLayout.tsx
 0cdbcf959f651eda81b5110e9d94fa002c96a6fdd47568bb40af6caf7f55b322  ./resources/js/pages/Access.tsx
@@ -337,6 +345,7 @@ f1b734d9f58e2babe5f5f85d4d8a6814c07d0a78cb7988a0c91fca988da82d1e  ./resources/js
 a4536c8339ca34992583ad003c397da70f5228140e73b9c3e60f8e2d43d7f674  ./resources/js/pages/Customers/Show.tsx
 b928a1a53b399b278d3c5161534f1ed91a524813793ac9d469841df5c7579901  ./resources/js/pages/Dashboard.tsx
 0a06ea4afb9cf43f54db8c4e9aa9b14092e8495a3e67b8aad66eecad6899c08a  ./resources/js/pages/FieldOps/Index.tsx
+5e2c0fe52f5ccc5606a2fa2bc323a91f974d57b0926bf6d4e3c7ec7d8bf187f6  ./resources/js/pages/Hotspot/Index.tsx
 7263a736a622c2eb6c8f36a2abc5273352a178aef674364b3805065839e878ff  ./resources/js/pages/Integrations/Index.tsx
 dee097edaaee9583844b7996d70d98f22ad998fc3b4dfc517e6482a40695dda4  ./resources/js/pages/Inventory/Auth/Login.tsx
 fb191a05c5aafc05f94aa57ee7a3fee20be77dc0edc7992de8b7a7886187540f  ./resources/js/pages/Inventory/Dashboard.tsx
@@ -368,8 +377,8 @@ b34cde90c92f4da05a0e63bb8d9926266a5b6703ef2c6dea20da54fa8fffe550  ./resources/js
 933dcdf5c9cbf089622bc3f7154075449c9b2ca630f84f93f560cf6465e41e18  ./resources/js/pages/System/Index.tsx
 4981814588f6781c132d63351f7f578dab2be5aefa93b17926f347e6bc7cb8e7  ./resources/views/app.blade.php
 c937c77097505395203f6a51b8f373fc955fe824e891033b6b1ff68fcf3b86cf  ./routes/api.php
-51e1c9ac517ad8d7436fc1239191600d390e48cdd6d4f13a739e5b95e96ee30e  ./routes/console.php
-050a45d41d5089bdeb0f2361a163f97c5009965d00ef6fc55279bdfb991cae09  ./routes/web.php
+7a45a6c36e2c41f27511b2446be7a3c87517d07ed5136d416e5161f40ca46d81  ./routes/console.php
+368ceb413cca17c0c932d5bbc02f2ed1106ca7fb82f0b8caffffaab31bc4f0c8  ./routes/web.php
 949db8bd42702823633970e438229c2f2d460e565bc2df5bc29f28b8ee52bf2a  ./scripts/accounting-online-demo.ps1
 ab5915c52fcee7763548dd253b661df14f201874f43fa2a69b10c1d12ed30027  ./scripts/accounting-test.ps1
 68ec8af99831846e0b68f193bc3f121d4a774b1503c61fdbe5d4e750b15025ea  ./scripts/automation-run.ps1
@@ -398,7 +407,7 @@ e158f1d17fcefb6fe85320374c643d2d485fd410ebc583de35f182c913728387  ./scripts/prod
 7ed88aa38d18c89edee5d4053f240a016fe9a00b9ca529d1993e451ea917a38d  ./scripts/prod-final-check.sh
 54293060c8e5a673633fe214d8343179426a201f0cd85dd708eedb6fb8fc78b2  ./scripts/prod-init.sh
 069ee5487cf8ef779e5294cd5b015e2ac5809f035c33f4126e8d2ecff571b252  ./scripts/prod-restore.sh
-a75c5bbff2bb534b213d5b76dd0efd3fd95d170b3936e40a3c8cdf1a1ac9546b  ./scripts/prod-up.sh
+2583dd75b59c9c8540eaeccca860b1754ec56e09f08196246b8bbb5d514b9996  ./scripts/prod-up.sh
 4af519ba893a9719aff90384946c05ca3736d87d744c049990624c60f0709954  ./scripts/radius-debug.ps1
 d8e06f77f4120d1985489d44f0774dbcca8365de7e9704c26c14e763303c35a3  ./scripts/radius-restart.ps1
 29467d402c600c0c41bb43f144e2e39345ae7c7afb55374b3b75115578a615a1  ./scripts/radius-test.ps1
@@ -418,6 +427,7 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  ./storage/fram
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  ./storage/framework/views/.gitkeep
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  ./storage/logs/.gitkeep
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  ./tests/Feature/.gitkeep
+df61ebd3fe03e04561cce1c11ec2b703df08745877b6ac3dc0d4eec15f635025  ./tests/Feature/HotspotVoucherTest.php
 b0c95784fea78673de1f63584010c72028353591ccd9dcaebe928e130a5b6af2  ./tests/Feature/InventoryPurchaseReceiptTest.php
 d2a8ca7a5419bac11028f0d669afa673668c92fcc875dcfc7a34d2bfe9b5c661  ./tests/Feature/NetworkEndpointPolicyTest.php
 88da5139ded4ba08b1757dc446a2241ec5bf609b9726a1aaf2684ffcef7ffa57  ./tests/Feature/PaymentIdempotencyTest.php

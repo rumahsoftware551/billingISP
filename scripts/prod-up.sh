@@ -38,7 +38,8 @@ case "$radius_client" in
     ;;
 esac
 case "$router_cidrs" in
-  ''|CHANGE_ME*) echo 'MIKROTIK_ALLOWED_CIDRS must contain the exact MikroTik IP/CIDR allowed for REST access.' >&2; exit 1 ;;
+  ''|CHANGE_ME*) echo 'MIKROTIK_ALLOWED_CIDRS must contain exact RouterOS v7 management CIDRs, or disabled when REST is unused.' >&2; exit 1 ;;
+  disabled) echo 'WARNING: MikroTik REST integration is disabled; RouterOS v6/v7 can still authenticate through RADIUS.' >&2 ;;
 esac
 case "$admin_email" in
   *@example.com|'') echo 'WARNING: SEED_ADMIN_EMAIL still looks like a placeholder.' >&2 ;;

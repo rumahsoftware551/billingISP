@@ -1,6 +1,6 @@
 import React, {useMemo, useState} from 'react';
 import {Head, Link, usePage} from '@inertiajs/react';
-import {Activity, Boxes, Building2, ChevronDown, CircleDollarSign, ClipboardList, CreditCard, FileBarChart, Gauge, Globe2, Menu, Network, PackageSearch, PanelsTopLeft, Settings, ShieldCheck, TicketCheck, Users, UsersRound, WalletCards, X} from 'lucide-react';
+import {Activity, Boxes, Building2, ChevronDown, CircleDollarSign, ClipboardList, FileBarChart, Gauge, Globe2, Menu, Network, PanelsTopLeft, Settings, ShieldCheck, Ticket, TicketCheck, Users, UsersRound, WalletCards, X} from 'lucide-react';
 
 type NavItem={name:string,href:string,icon:any,permission?:string};
 
@@ -17,6 +17,7 @@ export default function Layout({children}:{children:React.ReactNode}) {
     {name:'Billing & Pembayaran',href:'/billing',icon:CircleDollarSign,permission:'billing.view'},
     {name:'Bukti Pembayaran',href:'/billing/manual-payments',icon:WalletCards,permission:'billing.view'},
     {name:'Jaringan & RADIUS',href:'/network',icon:Network,permission:'network.view'},
+    {name:'Hotspot Voucher',href:'/hotspot',icon:Ticket,permission:'network.view'},
     {name:'Sesi Online',href:'/network/sessions',icon:Activity,permission:'network.view'},
     {name:'Mitra / Reseller',href:'/partners',icon:UsersRound,permission:'partners.view'},
     {name:'Inventory',href:'/inventory-management',icon:Boxes,permission:'inventory.view'},

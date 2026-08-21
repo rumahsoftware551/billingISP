@@ -10,6 +10,8 @@ server inner-tunnel {
         mschap
         suffix
         sql
+        expiration
+        logintime
         pap
     }
 
@@ -23,6 +25,10 @@ server inner-tunnel {
         Auth-Type MS-CHAP {
             mschap
         }
+    }
+
+    session {
+        sql
     }
 
     post-auth {
