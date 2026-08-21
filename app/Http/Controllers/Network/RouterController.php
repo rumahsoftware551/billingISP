@@ -5,13 +5,14 @@ namespace App\Http\Controllers\Network;
 use App\Http\Controllers\Controller;
 use App\Models\Router;
 use App\Services\MikrotikRestClient;
+use App\Services\RouterEndpointPolicy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Throwable;
 
 class RouterController extends Controller
 {
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, RouterEndpointPolicy $endpointPolicy): RedirectResponse
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
@@ -22,6 +23,7 @@ class RouterController extends Controller
             'verify_tls' => ['required', 'boolean'],
         ]);
 
+        $endpointPolicy->validateOrFail($data['host'], (int) $data['rest_port'], (bool) $data['verify_tls']);
         Router::create($data);
 
         return back()->with('success', 'Router berhasil ditambahkan.');

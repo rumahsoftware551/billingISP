@@ -12,9 +12,12 @@ return [
     'webhook_allow_insecure_http' => filter_var(env('WEBHOOK_ALLOW_INSECURE_HTTP', false), FILTER_VALIDATE_BOOL),
     'webhook_user_agent' => env('WEBHOOK_USER_AGENT', 'Jaringanku-Webhook/1.0'),
     'webhook_response_body_limit' => (int) env('WEBHOOK_RESPONSE_BODY_LIMIT', 2048),
+    'router_allowed_cidrs' => env('MIKROTIK_ALLOWED_CIDRS', ''),
+    'router_allowed_rest_ports' => env('MIKROTIK_ALLOWED_REST_PORTS', ''),
+    'router_allow_insecure_tls' => filter_var(env('MIKROTIK_ALLOW_INSECURE_TLS', false), FILTER_VALIDATE_BOOL),
     'radius_shared_secret' => env('RADIUS_SHARED_SECRET'),
     'radius_client_network' => env('RADIUS_CLIENT_NETWORK', 'disabled'),
     'seed_tenant_slug' => env('SEED_TENANT_SLUG', 'demo-isp'),
-    'phase08_smoke_token' => env('PHASE8_SMOKE_TOKEN', 'phase08-local-smoke'),
+    'phase08_smoke_token' => env('PHASE8_SMOKE_TOKEN'),
     'phase08_smoke_webhook_url' => env('PHASE8_SMOKE_WEBHOOK_URL', 'http://nginx/api/phase8-smoke/webhook'),
 ];

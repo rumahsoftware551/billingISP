@@ -25,6 +25,7 @@ RUN apt-get update \
         libicu-dev \
         libzip-dev \
         libonig-dev \
+        libcurl4-openssl-dev \
         unzip \
         curl \
         freeradius-utils \
@@ -34,6 +35,7 @@ RUN apt-get update \
         pcntl \
         intl \
         zip \
+        curl \
         mbstring \
     && rm -rf /var/lib/apt/lists/*
 

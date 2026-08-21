@@ -11,7 +11,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     env:
       APP_ENV: testing
       APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
@@ -43,7 +43,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
-          extensions: mbstring, pdo_pgsql
+          extensions: curl, mbstring, pdo_pgsql
           coverage: none
 
       - name: Validate Composer metadata
@@ -59,6 +59,12 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm ci --no-audit --no-fund
+
+      - name: Audit PHP dependencies
+        run: COMPOSER_NO_AUDIT=0 composer audit --locked --no-interaction
+
+      - name: Audit frontend dependencies
+        run: npm audit --audit-level=high
 
       - name: Verify release source manifest
         run: sh ./scripts/verify-release.sh
@@ -77,6 +83,9 @@ jobs:
 
       - name: Build frontend
         run: npm run build
+
+      - name: Build production application image
+        run: docker build -f docker/php/Dockerfile -t jaringanku-ci-app .
 
       - name: Validate shell scripts
         run: find docker scripts -name '*.sh' -print0 | xargs -0 -n1 bash -n

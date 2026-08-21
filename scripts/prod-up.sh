@@ -17,6 +17,7 @@ app_url=$(read_env APP_URL)
 force_https=$(read_env FORCE_HTTPS)
 secure_cookie=$(read_env SESSION_SECURE_COOKIE)
 radius_client=$(read_env RADIUS_CLIENT_NETWORK)
+router_cidrs=$(read_env MIKROTIK_ALLOWED_CIDRS)
 admin_email=$(read_env SEED_ADMIN_EMAIL)
 
 [ "$app_env" = "production" ] || { echo 'APP_ENV must be production.' >&2; exit 1; }
@@ -35,6 +36,9 @@ case "$radius_client" in
   ''|disabled|127.0.0.1|127.0.0.1/32|CHANGE_ME*)
     echo 'WARNING: RADIUS_CLIENT_NETWORK is not configured for a real NAS/MikroTik yet.' >&2
     ;;
+esac
+case "$router_cidrs" in
+  ''|CHANGE_ME*) echo 'MIKROTIK_ALLOWED_CIDRS must contain the exact MikroTik IP/CIDR allowed for REST access.' >&2; exit 1 ;;
 esac
 case "$admin_email" in
   *@example.com|'') echo 'WARNING: SEED_ADMIN_EMAIL still looks like a placeholder.' >&2 ;;

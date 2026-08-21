@@ -23,6 +23,9 @@ APP_BIND=127.0.0.1
 APP_PORT=8080
 TRUSTED_PROXIES=*
 RADIUS_CLIENT_NETWORK=<mikrotik-ip>/32
+MIKROTIK_ALLOWED_CIDRS=<mikrotik-ip>/32
+MIKROTIK_ALLOWED_REST_PORTS=443
+MIKROTIK_ALLOW_INSECURE_TLS=false
 SEED_ADMIN_EMAIL=<admin-email>
 MAIL_MAILER=log
 ```
@@ -42,6 +45,11 @@ X-Forwarded-For
 ```
 
 Do not expose PHP-FPM, PostgreSQL or Redis to the Internet.
+
+
+Koneksi REST MikroTik production hanya menerima IP literal yang berada di `MIKROTIK_ALLOWED_CIDRS`. Gunakan sertifikat TLS yang dipercaya. Jika perangkat lama benar-benar memerlukan TLS tanpa verifikasi, aktifkan `MIKROTIK_ALLOW_INSECURE_TLS=true` hanya pada jaringan VPN/management yang sempit dan terdokumentasi.
+
+Scheduler merekonsiliasi proyeksi RADIUS seluruh layanan setiap lima menit. Kegagalan per layanan dicatat dan membuat command gagal agar monitoring dapat memberi alert; putaran berikutnya akan mencoba ulang.
 
 ## 4. Start pertama kali
 

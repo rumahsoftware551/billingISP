@@ -8,8 +8,11 @@ use Illuminate\Support\Facades\Http;
 
 class MikrotikRestClient
 {
+    public function __construct(private RouterEndpointPolicy $endpointPolicy) {}
+
     private function request(Router $router): PendingRequest
     {
+        $this->endpointPolicy->validateOrFail($router->host, (int) $router->rest_port, (bool) $router->verify_tls);
         $request = Http::withBasicAuth($router->api_username, $router->api_password)
             ->acceptJson()
             ->connectTimeout(5)
@@ -20,7 +23,8 @@ class MikrotikRestClient
 
     public function systemResource(Router $router): array
     {
-        $base = sprintf('https://%s:%d/rest', $router->host, $router->rest_port);
+        $host = filter_var($router->host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) ? '['.$router->host.']' : $router->host;
+        $base = sprintf('https://%s:%d/rest', $host, $router->rest_port);
 
         return $this->request($router)
             ->get($base.'/system/resource')

@@ -1,8 +1,8 @@
 84b86f45d948e980295b0a1016bcff53d332c93afc815c987c2cb6b26bff039c  ./.dockerignore
-5bf5ab87f4dbc9b0716e5e7b182ed23e0723d4675c9c53865d33f1072788f5d8  ./.env.example
-b4b2af4d05edc0bc3d7f53f8cd98836fca902a7d5f66adbeda62dc64d02fbddf  ./.env.local.example
-5bf5ab87f4dbc9b0716e5e7b182ed23e0723d4675c9c53865d33f1072788f5d8  ./.env.production.example
-ffce10174f69371f00f683a80b12c7cd972f3ed1626d1f22d8e7f0beac9b67d4  ./.github/workflows/ci.yml
+2398f23f2364af3b8dec3825712ea9158bba5a95087d860ff82e2f2f61145e08  ./.env.example
+c5b712e672f58036d157ee76e305a8c5ffe67aa79b518229889746db108caa84  ./.env.local.example
+2398f23f2364af3b8dec3825712ea9158bba5a95087d860ff82e2f2f61145e08  ./.env.production.example
+eca0e46694e0d7eda42fccc8eb721a09a6794464a2556529886a82cea31f6b42  ./.github/workflows/ci.yml
 9e0697d847864912177a5e80257bd534a93d4e707b35a2583a47b81a9dc84f32  ./.gitignore
 8e94977894d4bbfd7fa74239ea5cb9df09520573a6da9bc1adaa7e20b41b9395  ./GO-LIVE-VALIDATION.txt
 5c283394333a4b098a8f0f5f6d9ca7295b2ee731f68a8b2f848d6f779bc88708  ./LAPORAN_AUDIT_FASE_0_JARINGANKU_2026-08-21.md
@@ -68,7 +68,7 @@ d453c8a7ed9eb2860a4abd047d088d689762b428b9f0e0a50568f84d6b982a52  ./app/Http/Con
 40fa05afd575632ea469ecf8ee452ba15a401cb883bfa046210fbac10209b05a  ./app/Http/Controllers/Network/NetworkController.php
 67b9e512c1736e9f46e828e747f50765d6cb605ae205fa3516ccb87c94f791c7  ./app/Http/Controllers/Network/PlanController.php
 2f3a3988c8920cf412c02a78f060ac96182c51f01ebf96a602517db44731adb2  ./app/Http/Controllers/Network/RadiusTestController.php
-d3df12ac4670004e56e2991d824deafc94aeab9a485a7271a0a279def288d97e  ./app/Http/Controllers/Network/RouterController.php
+6e93105b3fe408f6c58cc537789602d3836b42ca56d888f1cfbedf390231615a  ./app/Http/Controllers/Network/RouterController.php
 6938cb1ce24ef221d50cbfde856c441631b9a5d4909570879b1f922d42c17382  ./app/Http/Controllers/Network/SessionController.php
 b0f3ba0c24a705899f76c28904a384207c2bdd1333ec0c75c4981454866a7408  ./app/Http/Controllers/Operations/AutomationController.php
 6dbb3e8b09d3f9ea3615f57cb60760f0c63839dc1e08d6b28323635145b75d85  ./app/Http/Controllers/Partner/PartnerAuthController.php
@@ -105,7 +105,7 @@ b0240308e43c972474ceb4833aa5b8aac9ba686a47682cdd96ab1782f1c5eac8  ./app/Http/Mid
 235c662b370ded06a533e903d846093b998cf3f77847a163d84edee9acf7ed74  ./app/Http/Middleware/HandleInertiaRequests.php
 97db41547e56036d42d900cfa8667b61b0cf71da48c17eef6eb82c185a844c10  ./app/Http/Middleware/RequirePermission.php
 ba5c5f9fa0c22cafa7b9761d168afd4b3b875cde462404350631417911dea80b  ./app/Http/Middleware/SecurityHeaders.php
-ab6826bedf8700fdf506c0a987ee74ef976ff2f3288a92f005aca6179f648166  ./app/Jobs/DeliverWebhookJob.php
+2c79f95a773822d8f8854b6673ec834389b7f7526f60ef2583fdb008e54c08b8  ./app/Jobs/DeliverWebhookJob.php
 1f9bd3fbaced6bd08f773b343e846abed25f15ce3037570517ec5b84513294d9  ./app/Jobs/QueueHeartbeatJob.php
 96fb3b2275cacfdb57c7b93197eb08a9f11796fa0819c5fdaaf9c4b9db911ea4  ./app/Jobs/SendNotificationJob.php
 ff9e65b1b2be7d91f4819e50551eb0a830fe062c9f290e80714d17f8ca65ca53  ./app/Models/AuditLog.php
@@ -189,7 +189,8 @@ e527a89b04bd4e1c49728bc94c363cee51637ca0464cd1cbb2ac213eec0504d2  ./app/Services
 df4caf86cfbba5b0ed6a34fd288ceee3b136f4f45899b3e2160c1e84352977fa  ./app/Services/BillingEngine.php
 f87e6760ecc1937c86812c46aa35b3eba5757a2a94ff9b1c54c025708c45c6c1  ./app/Services/BrandingService.php
 40705cea38be40819bf2b0737071efaecea866708f9ed093a9069a9bd4bf561f  ./app/Services/InventoryLedgerService.php
-4b4a6f1d5266adba451e35bb9fb22b19695f6c070785a28dcd198e42e2790c24  ./app/Services/MikrotikRestClient.php
+d0b6ca526ed3d8883d0f8a101a8a31679ac5ff9f22fc4355df479f1fcdb937a7  ./app/Services/MikrotikRestClient.php
+0f7fc3fdf00189263cec4411881eca7b5b941ef174026e679cea5aef2f33e16a  ./app/Services/NetworkAddressPolicy.php
 7fda89f1f67ffa0bfafae6e610ddd9856adbd6829a03059dab8037a1cbc8ba2e  ./app/Services/NotificationService.php
 39799a1462388feeda806dcd69905f0978806f403d83c4a1b880d264e2931bff  ./app/Services/PartnerCommissionService.php
 40b80c43ff30cf4ab12794ce6470ff646617242d1d5c46a5ae4e5a8a9874e77e  ./app/Services/PaymentGatewayNotificationService.php
@@ -204,12 +205,13 @@ a8488891dc8f04f3c7adff023f590f89602de102a0cc3de48f465dadc6aee5e1  ./app/Services
 a9f2bf920b0210fc474dfe575b81e2ca8e19b44e5ba148508a729d83e76b096e  ./app/Services/RadiusTestService.php
 8ee907f1a0b119e5d6b064135b701c7364f5f95f2f84fe9dc84339340b7d52d8  ./app/Services/ReleaseAcceptanceService.php
 3e37bdca4dd53e4541febde056f8d4163cbd505706f06ece8f24ee1e26dd7f55  ./app/Services/ReportService.php
+6dfdbeff15e731315bd77a4c34300e67083e91fa10312ab3cbe86e4d293dd31b  ./app/Services/RouterEndpointPolicy.php
 60b56807ca1b518acf2e00bba5de5cdc189d582b6236eff5e8f902c0bd27510d  ./app/Services/SaasPlanService.php
 1a8a1493ea8c9cd8d0ae50cc9d451cf3c341e8f888775831339a6f6f3a14d5f9  ./app/Services/SecurityEventService.php
 7a6fc13158e23b13e17b6c319161fda47edf27588da23cbdaadab0201be5ffab  ./app/Services/SystemHealthService.php
 07f929d30e240cc273057d200fab09bdd323437cadec7576c0f2d28b3f5b8721  ./app/Services/TenantSequenceService.php
 a28cc0885fe8e7d57652b81de59c64a12ca970468333e68322b1033f7df18861  ./app/Services/WebhookService.php
-ccf0c768b8b2590affb53dfb9f1a1645641be374affbaeb07a763213437bd500  ./app/Services/WebhookUrlPolicy.php
+981394453ab7feacb1e1e0203a2907014e3bcd8d3574ad18d304a514086085db  ./app/Services/WebhookUrlPolicy.php
 7c9d4b64145e4b29981b43267aa294410d2f7969408b2d567b4d3b282a909118  ./app/Services/WhatsAppService.php
 cb4854a31dabc91c97ab46d6f5e4daf761959676c65b1c6b1764c9059728fc30  ./app/Support/CurrentTenant.php
 4c6679bf1282a5e3625288523550954dad439a3e28f1a8ccc65e3f816499d0e5  ./app/Support/PortalContext.php
@@ -225,7 +227,7 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  ./backups/.git
 67bc629937adf5ee7ef9886c1555c5ca725fb855fdbf60c4d9a9dd354019c24c  ./config/cache.php
 4c2e328f7c3406d9520b88e038db471dd7d02b08a94967547a0a342f633823c9  ./config/database.php
 0d4d5dbc299532be8ee196c1c402ceec71d99a7d23ed8f49b21f1cdf77aac9d2  ./config/filesystems.php
-9a554ce5a218e3bee12b43b8efbea9a83788386fd8704aa95f51fefc3a35847f  ./config/jaringanku.php
+162b9698cb164b6342a4c9b7c17c3fa0d9e9b3a2cb31bb4f062d162b33bf84bb  ./config/jaringanku.php
 3bf4ac3d6fcaa1a71cdf56ee504ae9c46f404492f134e09af8456bccf0a2773f  ./config/logging.php
 01ece469f882d157818104e3519e8162ec08b1f3406ba5d7200898b67c346721  ./config/mail.php
 37dee426866a954901114e660b85e7d1cb42964cbd85a36d9b1169e7724dcc44  ./config/queue.php
@@ -258,7 +260,7 @@ c613ff737f0ccffd02bb99c48c2fec719dcf395b8979aeda43ff3b2118086749  ./docker/backu
 b3594c35c8acd1fee4d8d0bb031568e1a1fdde3709cff430ab6cef9afb8a816a  ./docker/backup/backup-loop.sh
 25555d1850ea28a3388130db8e2f400389b579767540070880595c673f1fecbe  ./docker/nginx/Dockerfile
 c0545cee86a79239b54581b73af9b30c2320b2c0b8bef02723ba8a0e47c408c5  ./docker/nginx/default.conf
-e7cc01d0bf911f2a5bfbb93e073ac0946b310cd3e39eec9de95493e2cb28cbee  ./docker/php/Dockerfile
+d88f192dce3a22d458259c9805162cd5af55c564d042c903b5da28256301c19f  ./docker/php/Dockerfile
 9dd5888b691f77bf672149d41a2b9c34a4027aeec3ae33df458556a417569024  ./docker/php/cli.sh
 65cee0f200e49c67d2f6e2c417d15de830c2f873a50f867f94279b4ab40d2201  ./docker/php/entrypoint.sh
 48e2ab45223f09482444488f837284d5e92f21e4cd09487989b3f25c47adf0af  ./docker/radius/Dockerfile
@@ -279,7 +281,7 @@ dfb6992930cab6314ca0d0b78c8e5a1df59e8e3965be00995bb282acae2014a4  ./docs/CUSTOME
 24e77c8dfb592330dac9bd34f010071a3bae20e20546ed6c2a5e23e85f42907f  ./docs/MIKROTIK-PHASE04-ACCOUNTING-COA.md
 623f33b894ab982141163f8245098b9b9725b7685bc35098853a8e06c6ba749e  ./docs/PAYMENT-WHATSAPP.md
 5fd8cda22f51c3f2fea379630b803595796ee9e8363fabaf279a2e303539efc1  ./docs/PRODUCTION-DEPLOYMENT-PHASE11.md
-5c9ff04b01ecd3d7b5be68692c012390183d215de77d6fe40440fd918a60feb2  ./docs/PRODUCTION-DEPLOYMENT.md
+eb4fea277c5e8c08a74a87f64c3b0b05c55577470830cb20e7362336e8166fb2  ./docs/PRODUCTION-DEPLOYMENT.md
 ad8dccbaaff96cc63ac7abb9571dc52ff30c5de59d156f4895996c03d8046ac9  ./docs/PRODUCTION-FINAL.md
 7ffd14418b8cb316e575de683af0e333132d75c9f68e673d2e10650e4e7ccfde  ./docs/PRODUCTION-READINESS.md
 c62221e456742e75d44d06084def3e952c1c4be6dafee2a963472911fd7e60d4  ./docs/RELEASE-NOTES-PHASE03-V2.md
@@ -364,7 +366,7 @@ b34cde90c92f4da05a0e63bb8d9926266a5b6703ef2c6dea20da54fa8fffe550  ./resources/js
 933dcdf5c9cbf089622bc3f7154075449c9b2ca630f84f93f560cf6465e41e18  ./resources/js/pages/System/Index.tsx
 4981814588f6781c132d63351f7f578dab2be5aefa93b17926f347e6bc7cb8e7  ./resources/views/app.blade.php
 c937c77097505395203f6a51b8f373fc955fe824e891033b6b1ff68fcf3b86cf  ./routes/api.php
-7d9646f3868eab249daa461b5b7772706dabb30b958be36102864c73620e3a93  ./routes/console.php
+51e1c9ac517ad8d7436fc1239191600d390e48cdd6d4f13a739e5b95e96ee30e  ./routes/console.php
 756430250045c8dd0bdb152434d593d1adc11de8ba6b393d1023c6620f6e8a0e  ./routes/web.php
 949db8bd42702823633970e438229c2f2d460e565bc2df5bc29f28b8ee52bf2a  ./scripts/accounting-online-demo.ps1
 ab5915c52fcee7763548dd253b661df14f201874f43fa2a69b10c1d12ed30027  ./scripts/accounting-test.ps1
@@ -379,7 +381,7 @@ ef51bf81b68e1ed12b99b6310961d85eb8c674120f016b2b700d69430e4634fb  ./scripts/auto
 d17f9ecf504c479e1b353ed1fd12100d58bbffa29e163b57f900f1932b7473ff  ./scripts/init.sh
 295f08b09b2bae0386ef7362af4a838d303ae99ad33e9f400d4114276df0b79b  ./scripts/local-reset.ps1
 4828c5c6d81b7b080e65a8c37b140ef48384f1e70d0a70b3588859488c34ceab  ./scripts/local-status.ps1
-2e9983cbb7a1c9fad0a984df19a1b81c12a736589644b4db1609dde9408907c0  ./scripts/local-up.ps1
+4336f6f79d1a24a7bca48af93eab14fb1630537e9b55342a35bc8c2ac018b469  ./scripts/local-up.ps1
 d4e24f6a15bf254fa2309067d0c81ecdfe543dfd119901f592809f18d2c3a3e2  ./scripts/payment-reminders.ps1
 4a34b7a4bab7cbfe7e2aabcfa2c0c0fcf56affde8452285ff707e70f49673025  ./scripts/phase08-smoke.ps1
 ad9f865df80627125bf1c30fe0229515acdb1bcb2cf2d69263d5c7c72ff94da1  ./scripts/phase09-smoke.ps1
@@ -394,10 +396,10 @@ e158f1d17fcefb6fe85320374c643d2d485fd410ebc583de35f182c913728387  ./scripts/prod
 7ed88aa38d18c89edee5d4053f240a016fe9a00b9ca529d1993e451ea917a38d  ./scripts/prod-final-check.sh
 54293060c8e5a673633fe214d8343179426a201f0cd85dd708eedb6fb8fc78b2  ./scripts/prod-init.sh
 069ee5487cf8ef779e5294cd5b015e2ac5809f035c33f4126e8d2ecff571b252  ./scripts/prod-restore.sh
-54c7bbd29519797e3ac1b78404d8ea634750163628f34c1565e90d5c22d29561  ./scripts/prod-up.sh
+a75c5bbff2bb534b213d5b76dd0efd3fd95d170b3936e40a3c8cdf1a1ac9546b  ./scripts/prod-up.sh
 4af519ba893a9719aff90384946c05ca3736d87d744c049990624c60f0709954  ./scripts/radius-debug.ps1
 d8e06f77f4120d1985489d44f0774dbcca8365de7e9704c26c14e763303c35a3  ./scripts/radius-restart.ps1
-699bdfd56a799a1f672ea605cac5635d6742dc20906eaaf1bf6858885d34bd6c  ./scripts/radius-test.ps1
+29467d402c600c0c41bb43f144e2e39345ae7c7afb55374b3b75115578a615a1  ./scripts/radius-test.ps1
 8b12aa4dd5bfe0da7d451d877b5bf5332b84f15d839faa46113c049e380089e6  ./scripts/release-record.sh
 6ec897deece5fdb32fed616b209f10a8b6e1e76c6c0858f6b110361e534878ab  ./scripts/reports-smoke.ps1
 e07c4a405b2d8fbf1e56fcc9f86f50c4197f45eb23a43a9c298aed4e791ceb06  ./scripts/restore-local.ps1
@@ -415,7 +417,9 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  ./storage/fram
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  ./storage/logs/.gitkeep
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  ./tests/Feature/.gitkeep
 b0c95784fea78673de1f63584010c72028353591ccd9dcaebe928e130a5b6af2  ./tests/Feature/InventoryPurchaseReceiptTest.php
+d2a8ca7a5419bac11028f0d669afa673668c92fcc875dcfc7a34d2bfe9b5c661  ./tests/Feature/NetworkEndpointPolicyTest.php
 88da5139ded4ba08b1757dc446a2241ec5bf609b9726a1aaf2684ffcef7ffa57  ./tests/Feature/PaymentIdempotencyTest.php
+546d6eb6d469d0b6e178359ac127ad8f525291dc72b653a663a2ee0bc4f101d9  ./tests/Feature/RadiusReconciliationTest.php
 fabd28db688ad9b2dd8c7d23c55d27f94ba3654131ac07e39bb8029066b92259  ./tests/Feature/SystemHealthReadinessTest.php
 a6ec8981fc68868b666c2764ab9f95565104b0e2178a10b2dc24aa7530f078ea  ./tests/Feature/WhatsAppWebhookSecurityTest.php
 2bc31e61393c9504ef4cde8c47e71cb81bf0fec587cb33c96a6030e5c916faec  ./tests/TestCase.php

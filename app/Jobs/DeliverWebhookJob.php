@@ -43,7 +43,9 @@ class DeliverWebhookJob implements ShouldQueue
             return;
         }
 
-        $urlPolicy->validateOrFail((string) $endpoint->url);
+        // Resolve, validate, and pin immediately before every attempt. Redirects stay
+        // disabled so the validated destination cannot bounce into an internal address.
+        $httpOptions = $urlPolicy->httpOptions((string) $endpoint->url);
 
         $attempt = (int) $delivery->attempts + 1;
         $delivery->forceFill(['status' => 'sending', 'attempts' => $attempt, 'last_error' => null])->save();
@@ -54,6 +56,7 @@ class DeliverWebhookJob implements ShouldQueue
 
         try {
             $response = Http::asJson()
+                ->withOptions($httpOptions)
                 ->acceptJson()
                 ->timeout(max(1, min(30, (int) $endpoint->timeout_seconds)))
                 ->withUserAgent((string) config('jaringanku.webhook_user_agent'))
