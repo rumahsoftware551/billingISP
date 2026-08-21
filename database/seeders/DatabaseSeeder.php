@@ -15,6 +15,7 @@ use App\Support\CurrentTenant;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use RuntimeException;
 
 class DatabaseSeeder extends Seeder
 {
@@ -60,16 +61,23 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        $user = User::firstOrCreate(
-            ['email' => env('SEED_ADMIN_EMAIL', 'admin@jaringanku.local')],
-            [
+        $adminEmail = env('SEED_ADMIN_EMAIL', 'admin@jaringanku.local');
+        $user = User::query()->where('email', $adminEmail)->first();
+        if ($user && ! $user->is_platform_admin) {
+            throw new RuntimeException('Bootstrap admin email sudah dipakai oleh user non-platform-admin. Gunakan email bootstrap baru; seeder tidak akan menaikkan privilege user yang sudah ada.');
+        }
+        if (! $user) {
+            $adminPassword = (string) env('SEED_ADMIN_PASSWORD', '');
+            if (blank($adminPassword) || str_starts_with($adminPassword, 'CHANGE_ME_')) {
+                throw new RuntimeException('SEED_ADMIN_PASSWORD wajib diatur dengan password unik sebelum membuat bootstrap administrator.');
+            }
+
+            $user = User::query()->create([
                 'name' => env('SEED_ADMIN_NAME', 'Administrator Jaringanku'),
-                'password' => Hash::make(env('SEED_ADMIN_PASSWORD', 'Jaringanku123!')),
+                'email' => $adminEmail,
+                'password' => Hash::make($adminPassword),
                 'is_platform_admin' => true,
-            ]
-        );
-        if (! $user->is_platform_admin) {
-            $user->forceFill(['is_platform_admin' => true])->save();
+            ]);
         }
 
         DB::table('tenant_memberships')->updateOrInsert(
@@ -229,10 +237,16 @@ class DatabaseSeeder extends Seeder
             return;
         }
 
+        $radiusTestPassword = $this->requiredDemoSecret('RADIUS_TEST_PASSWORD');
+        $partnerPassword = $this->requiredDemoSecret('PHASE13_PARTNER_PASSWORD');
+        $inventoryPassword = $this->requiredDemoSecret('PHASE14_INVENTORY_PASSWORD');
+        $portalPassword = $this->requiredDemoSecret('PHASE10_PORTAL_PASSWORD');
+        $pppoePassword = $this->requiredDemoSecret('PHASE3_DEMO_PPPOE_PASSWORD');
+
         // Keep the Phase 02 smoke-test user in local/demo only.
         DB::table('radcheck')->updateOrInsert(
             ['username' => 'phase2-test', 'attribute' => 'Cleartext-Password'],
-            ['op' => ':=', 'value' => env('RADIUS_TEST_PASSWORD', 'Phase2Test123!')]
+            ['op' => ':=', 'value' => $radiusTestPassword]
         );
         DB::table('radreply')->updateOrInsert(
             ['username' => 'phase2-test', 'attribute' => 'Mikrotik-Rate-Limit'],
@@ -286,7 +300,7 @@ class DatabaseSeeder extends Seeder
             [
                 'partner_id' => $partner->id,
                 'name' => 'Owner Mitra Demo',
-                'password' => env('PHASE13_PARTNER_PASSWORD', 'MitraDemo123!'),
+                'password' => $partnerPassword,
                 'role' => 'owner',
                 'status' => 'active',
                 'must_change_password' => false,
@@ -313,7 +327,7 @@ class DatabaseSeeder extends Seeder
         );
         \App\Models\InventoryPortalAccount::query()->updateOrCreate(
             ['email'=>'inventory@jaringanku.local'],
-            ['inventory_location_id'=>$warehouse->id,'name'=>'Warehouse Manager Demo','password'=>env('PHASE14_INVENTORY_PASSWORD','InventoryDemo123!'),'role'=>'warehouse_manager','status'=>'active','must_change_password'=>false]
+            ['inventory_location_id'=>$warehouse->id,'name'=>'Warehouse Manager Demo','password'=>$inventoryPassword,'role'=>'warehouse_manager','status'=>'active','must_change_password'=>false]
         );
         \App\Models\InventorySku::query()->updateOrCreate(
             ['sku'=>'ONT-DEMO'],
@@ -333,7 +347,7 @@ class DatabaseSeeder extends Seeder
             [
                 'tenant_id' => $tenant->id,
                 'email' => 'demo@jaringanku.local',
-                'password' => Hash::make(env('PHASE10_PORTAL_PASSWORD', 'PortalDemo123!')),
+                'password' => Hash::make($portalPassword),
                 'status' => 'active',
                 'must_change_password' => false,
                 'portal_enabled_at' => now(),
@@ -357,7 +371,7 @@ class DatabaseSeeder extends Seeder
                 'internet_plan_id' => $plan->id,
                 'service_number' => 'SRV-000001',
                 'service_type' => 'pppoe',
-                'pppoe_password' => env('PHASE3_DEMO_PPPOE_PASSWORD', 'Phase3Demo123!'),
+                'pppoe_password' => $pppoePassword,
                 'status' => 'active',
                 'billing_day' => 1,
                 'due_day' => 10,
@@ -379,5 +393,16 @@ class DatabaseSeeder extends Seeder
         );
 
         app(RadiusProjectionService::class)->syncService($service);
+    }
+
+    private function requiredDemoSecret(string $key): string
+    {
+        $value = (string) env($key, '');
+
+        if (blank($value) || $value === 'DISABLED' || str_starts_with($value, 'CHANGE_ME_')) {
+            throw new RuntimeException("{$key} wajib diatur dengan secret demo unik saat SEED_DEMO_DATA=true.");
+        }
+
+        return $value;
     }
 }
