@@ -76,7 +76,7 @@ Route::prefix('/portal/{tenantSlug}')->group(function () {
     Route::get('/login', [PortalAuthController::class, 'create'])->name('portal.login');
     Route::post('/login', [PortalAuthController::class, 'store'])->middleware('throttle:30,1')->name('portal.login.store');
 
-    Route::middleware('portal.auth')->group(function () {
+    Route::middleware(['portal.auth', 'tenant.bound'])->group(function () {
         Route::get('/dashboard', PortalDashboardController::class)->name('portal.dashboard');
         Route::post('/logout', [PortalAuthController::class, 'destroy'])->name('portal.logout');
         Route::get('/profile', [PortalProfileController::class, 'show'])->name('portal.profile');
@@ -100,7 +100,7 @@ Route::get('/mitra/tenant/login', fn () => redirect('/access?portal=partner'))->
 Route::prefix('/mitra/{tenantSlug}')->group(function () {
     Route::get('/login', [PartnerAuthController::class, 'create'])->name('partner.login');
     Route::post('/login', [PartnerAuthController::class, 'store'])->middleware('throttle:30,1')->name('partner.login.store');
-    Route::middleware('partner.auth')->group(function () {
+    Route::middleware(['partner.auth', 'tenant.bound'])->group(function () {
         Route::get('/dashboard', PartnerDashboardController::class)->name('partner.dashboard');
         Route::post('/logout', [PartnerAuthController::class, 'destroy'])->name('partner.logout');
         Route::get('/customers', [PartnerCustomerController::class, 'index'])->name('partner.customers.index');
@@ -120,7 +120,7 @@ Route::get('/inventory/tenant/login', fn () => redirect('/access?portal=inventor
 Route::prefix('/inventory/{tenantSlug}')->group(function () {
     Route::get('/login', [InventoryAuthController::class, 'create'])->name('inventory.login');
     Route::post('/login', [InventoryAuthController::class, 'store'])->middleware('throttle:30,1')->name('inventory.login.store');
-    Route::middleware('inventory.auth')->group(function () {
+    Route::middleware(['inventory.auth', 'tenant.bound'])->group(function () {
         Route::get('/dashboard', InventoryDashboardController::class)->name('inventory.dashboard');
         Route::post('/logout', [InventoryAuthController::class, 'destroy'])->name('inventory.logout');
         Route::put('/password', [InventoryAuthController::class, 'password'])->name('inventory.password');
@@ -153,7 +153,7 @@ Route::middleware(['auth', 'platform-admin'])->prefix('platform')->group(functio
     Route::post('/release/audit', [ReleaseCenterController::class, 'audit'])->name('platform.release.audit');
 });
 
-Route::middleware(['auth', 'tenant', 'subscription'])->group(function () {
+Route::middleware(['auth', 'tenant', 'tenant.bound', 'subscription'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->middleware('permission:dashboard.view')->name('dashboard');
 
     Route::middleware('system-admin')->group(function () {

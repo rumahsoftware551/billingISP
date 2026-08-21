@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureTenant;
+use App\Http\Middleware\EnsureBoundModelsBelongToTenant;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\EnsureSystemAdmin;
 use App\Http\Middleware\EnsureCustomerPortal;
@@ -24,7 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [HandleInertiaRequests::class, SecurityHeaders::class]);
-        $middleware->alias(['tenant' => EnsureTenant::class, 'system-admin' => EnsureSystemAdmin::class, 'portal.auth' => EnsureCustomerPortal::class, 'subscription' => EnsureActiveSubscription::class, 'subscription.limit' => EnforcePlanLimit::class, 'platform-admin' => EnsurePlatformAdmin::class, 'partner.auth' => EnsurePartnerPortal::class, 'inventory.auth' => EnsureInventoryPortal::class, 'permission' => RequirePermission::class]);
+        $middleware->alias(['tenant' => EnsureTenant::class, 'tenant.bound' => EnsureBoundModelsBelongToTenant::class, 'system-admin' => EnsureSystemAdmin::class, 'portal.auth' => EnsureCustomerPortal::class, 'subscription' => EnsureActiveSubscription::class, 'subscription.limit' => EnforcePlanLimit::class, 'platform-admin' => EnsurePlatformAdmin::class, 'partner.auth' => EnsurePartnerPortal::class, 'inventory.auth' => EnsureInventoryPortal::class, 'permission' => RequirePermission::class]);
 
         $trusted = trim((string) env('TRUSTED_PROXIES', ''));
         if ($trusted !== '') {
