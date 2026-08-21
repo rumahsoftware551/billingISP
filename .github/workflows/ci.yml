@@ -38,7 +38,7 @@ jobs:
           coverage: none
 
       - name: Validate Composer metadata
-        run: composer validate --strict --no-check-lock
+        run: composer validate --strict
 
       - name: Install PHP dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
