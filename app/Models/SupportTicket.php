@@ -1,5 +1,0 @@
-<?php
-namespace App\Models;
-use App\Models\Concerns\BelongsToTenant;
-use Illuminate\Database\Eloquent\Model;
-class SupportTicket extends Model { use BelongsToTenant; protected $fillable=['tenant_id','ticket_number','customer_id','customer_service_id','assigned_technician_id','created_by_user_id','created_by_portal_account_id','created_by_partner_account_id','source','category','priority','status','subject','description','opened_at','first_response_at','resolved_at','closed_at']; protected function casts():array{return ['opened_at'=>'datetime','first_response_at'=>'datetime','resolved_at'=>'datetime','closed_at'=>'datetime'];} public function customer(){return $this->belongsTo(Customer::class);} public function service(){return $this->belongsTo(CustomerService::class,'customer_service_id');} public function technician(){return $this->belongsTo(Technician::class,'assigned_technician_id');} public function comments(){return $this->hasMany(TicketComment::class);} public function workOrders(){return $this->hasMany(WorkOrder::class);} }

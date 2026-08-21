@@ -1,2 +1,0 @@
-import React from 'react'; import Layout from '../components/Layout'; import { Head } from '@inertiajs/react';
-export default function Placeholder({title,items=[]}:{title:string,items?:any[]}){return <Layout><Head title={title}/><div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6"><h2 className="text-xl font-bold mb-4">{title}</h2><pre className="text-xs text-slate-300 overflow-auto">{JSON.stringify(items,null,2)}</pre></div></Layout>}

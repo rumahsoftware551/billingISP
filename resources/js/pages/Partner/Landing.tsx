@@ -1,1 +1,0 @@
-import React,{useState} from 'react';import {PortalChooser} from '../Portal/Landing';export default function Landing(){const [slug,setSlug]=useState('');return <PortalChooser title="Portal Mitra" value={slug} setValue={setSlug} prefix="mitra"/>}

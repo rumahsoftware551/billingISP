@@ -1,5 +1,0 @@
-<?php
-namespace App\Models;
-use App\Models\Concerns\BelongsToTenant;
-use Illuminate\Database\Eloquent\Model;
-class WorkOrder extends Model { use BelongsToTenant; protected $fillable=['tenant_id','work_order_number','support_ticket_id','customer_id','customer_service_id','technician_id','created_by_user_id','type','priority','status','scheduled_at','started_at','completed_at','address','latitude','longitude','instructions','resolution']; protected function casts():array{return ['scheduled_at'=>'datetime','started_at'=>'datetime','completed_at'=>'datetime','latitude'=>'decimal:7','longitude'=>'decimal:7'];} public function ticket(){return $this->belongsTo(SupportTicket::class,'support_ticket_id');} public function customer(){return $this->belongsTo(Customer::class);} public function service(){return $this->belongsTo(CustomerService::class,'customer_service_id');} public function technician(){return $this->belongsTo(Technician::class);} public function installationJob(){return $this->hasOne(InstallationJob::class);} }

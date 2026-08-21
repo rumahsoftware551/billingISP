@@ -1,1 +1,0 @@
-<?php namespace App\Support; use App\Models\Tenant; final class CurrentTenant { public function __construct(public Tenant $tenant){} public function id():string{return (string)$this->tenant->getKey();} }

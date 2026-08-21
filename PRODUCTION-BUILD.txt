@@ -1,7 +1,0 @@
-Jaringanku Phase 16 FULL V3 — VPS Go-Live Pilot Bundle
-Application version : 1.2.0-dev
-Release channel     : development
-Artifact revision   : FULL-V3 + VPS Go-Live Pilot tooling
-Purpose             : staging/pilot production + VPS acceptance
-Included            : source, production Compose, Ubuntu bootstrap, Nginx/HTTPS, RADIUS firewall, backup/restore, manual PDF
-Important           : complete MikroTik/RADIUS/customer pilot acceptance before mass onboarding or stable promotion

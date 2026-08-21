@@ -1,2 +1,0 @@
-<?php namespace App\Models\Concerns; use App\Support\CurrentTenant; use Illuminate\Database\Eloquent\Builder;
-trait BelongsToTenant { protected static function bootBelongsToTenant():void { static::creating(function($m){if(!$m->tenant_id && app()->bound(CurrentTenant::class))$m->tenant_id=app(CurrentTenant::class)->id();}); static::addGlobalScope('tenant',function(Builder $b){if(app()->bound(CurrentTenant::class))$b->where($b->getModel()->getTable().'.tenant_id',app(CurrentTenant::class)->id());}); } }
