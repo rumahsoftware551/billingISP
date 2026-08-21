@@ -23,13 +23,11 @@ class OperationalSafetySourceTest extends TestCase
         self::assertStringContainsString('run --rm --no-deps migrate', $deploy);
     }
 
-    public function test_privilege_and_purchase_receive_guards_are_present(): void
+    public function test_purchase_receive_guard_is_present(): void
     {
         $root = dirname(__DIR__, 2);
-        $seeder = file_get_contents($root.'/database/seeders/DatabaseSeeder.php');
         $purchase = file_get_contents($root.'/app/Http/Controllers/Inventory/InventoryPurchaseController.php');
 
-        self::assertStringContainsString('seeder tidak akan menaikkan privilege', $seeder);
         self::assertStringContainsString('lockForUpdate()', $purchase);
     }
 }

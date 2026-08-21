@@ -27,6 +27,7 @@ class RoleAwareUiSourceTest extends TestCase
     public function test_dashboard_is_role_aware_and_does_not_use_one_generic_workspace(): void
     {
         $source = file_get_contents(base_path('resources/js/pages/Dashboard.tsx'));
+        $profiles = file_get_contents(base_path('resources/js/config/roleUi.ts'));
 
         foreach ([
             'Dashboard Owner',
@@ -34,19 +35,22 @@ class RoleAwareUiSourceTest extends TestCase
             'Dashboard Customer Service',
             'Dashboard NOC',
             'Dashboard Warehouse',
-            'Mode Read Only aktif',
-            'metricsFor(roleSlug',
         ] as $needle) {
-            $this->assertStringContainsString($needle, $source);
+            $this->assertStringContainsString($needle, $profiles);
         }
+
+        $this->assertStringContainsString('ROLE_UI[roleSlug]', $source);
+        $this->assertStringContainsString('metricsFor(roleSlug', $source);
+        $this->assertStringContainsString('Mode Read Only aktif', $source);
     }
 
     public function test_sidebar_keeps_permission_filter_and_admin_controls_are_role_limited(): void
     {
         $source = file_get_contents(base_path('resources/js/components/Layout.tsx'));
+        $dashboard = file_get_contents(base_path('resources/js/pages/Dashboard.tsx'));
 
-        $this->assertStringContainsString('group.items.filter(item=>can(item.permission))', $source);
-        $this->assertStringContainsString("systemAdmin && ['owner','admin'].includes(roleSlug)", $source);
+        $this->assertStringContainsString('.filter(item=>can(item.permission))', $source);
+        $this->assertStringContainsString("systemAdmin && ['owner','admin'].includes(roleSlug)", $dashboard);
     }
 
     public function test_rbac_repair_command_exists(): void
