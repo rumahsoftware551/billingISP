@@ -97,6 +97,8 @@ class PaymentGatewayNotificationService
                             now(),
                             'Payment gateway Midtrans: '.$transaction->order_id,
                             null,
+                            idempotencyKey: $transaction->order_id,
+                            source: 'gateway_midtrans',
                         );
                         $this->notifications->paymentReceived($invoice->fresh(['customer']), $payment);
                     }
@@ -132,7 +134,7 @@ class PaymentGatewayNotificationService
             if (! $payment) {
                 $amount = min((int) $transaction->amount, (int) $invoice->balance_due);
                 if ($amount > 0) {
-                    $payment = $this->payments->postToInvoice($invoice, $amount, 'qris', $transaction->order_id, now(), 'Mock gateway payment Phase 09.', null);
+                    $payment = $this->payments->postToInvoice($invoice, $amount, 'qris', $transaction->order_id, now(), 'Mock gateway payment Phase 09.', null, idempotencyKey: $transaction->order_id, source: 'gateway_mock');
                     $this->notifications->paymentReceived($invoice->fresh(['customer']), $payment);
                 }
             }

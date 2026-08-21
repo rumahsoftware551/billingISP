@@ -169,6 +169,30 @@ class BillingPaymentIntegrityTest extends TestCase
         );
     }
 
+    public function test_same_idempotency_key_replays_the_original_payment_once(): void
+    {
+        $tenant = $this->createTenant('idempotency');
+        $this->bindTenant($tenant);
+        $invoice = $this->createInvoice($this->createCustomer('IDEMP'), 200000);
+
+        $first = app(PaymentService::class)->postToInvoice(
+            $invoice, 100000, 'transfer', 'IDEMP-REF', now(), null, null,
+            idempotencyKey: 'b84ffb0f-8ca5-4d29-9451-0d1ac4680a33',
+            source: 'admin_payment',
+        );
+        $second = app(PaymentService::class)->postToInvoice(
+            $invoice, 100000, 'transfer', 'IDEMP-REF', now(), null, null,
+            idempotencyKey: 'b84ffb0f-8ca5-4d29-9451-0d1ac4680a33',
+            source: 'admin_payment',
+        );
+
+        $this->assertSame($first->id, $second->id);
+        $this->assertTrue((bool) $second->getAttribute('idempotency_replayed'));
+        $this->assertSame(1, Payment::query()->count());
+        $this->assertSame(1, PaymentAllocation::query()->count());
+        $this->assertSame(100000, (int) $invoice->fresh()->paid_amount);
+    }
+
     public function test_overpayment_is_rejected_without_creating_payment(): void
     {
         $tenant = $this->createTenant('overpay');
