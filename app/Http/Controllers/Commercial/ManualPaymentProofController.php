@@ -91,7 +91,8 @@ class ManualPaymentProofController extends Controller
                 $locked->reference,
                 now(),
                 'Approved from portal proof #'.$locked->id.(($data['review_note'] ?? null) ? ' · '.$data['review_note'] : ''),
-                auth()->id()
+                auth()->id(),
+                idempotencyKey: 'manual-proof:'.$locked->id,
             );
 
             $locked->forceFill([

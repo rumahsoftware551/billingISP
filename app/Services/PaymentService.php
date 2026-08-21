@@ -27,14 +27,48 @@ class PaymentService
         ?string $notes,
         ?int $actorUserId,
         ?int $partnerId = null,
-        ?int $partnerAccountId = null
+        ?int $partnerAccountId = null,
+        ?string $idempotencyKey = null,
     ): Payment {
         if ($amount <= 0) {
             throw ValidationException::withMessages(['amount' => 'Nominal pembayaran harus lebih dari 0.']);
         }
 
-        $payment = DB::transaction(function () use ($invoice, $amount, $method, $reference, $paidAt, $notes, $actorUserId, $partnerId, $partnerAccountId) {
+        $idempotencyKey = filled($idempotencyKey) ? trim((string) $idempotencyKey) : null;
+
+        $payment = DB::transaction(function () use ($invoice, $amount, $method, $reference, $paidAt, $notes, $actorUserId, $partnerId, $partnerAccountId, $idempotencyKey) {
             $locked = Invoice::query()->whereKey($invoice->id)->lockForUpdate()->firstOrFail();
+            $tenantId = (string) $locked->tenant_id;
+
+            if ($idempotencyKey !== null) {
+                $existing = Payment::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('idempotency_key', $idempotencyKey)
+                    ->first();
+
+                if ($existing) {
+                    $allocation = PaymentAllocation::query()
+                        ->where('payment_id', $existing->id)
+                        ->where('invoice_id', $locked->id)
+                        ->first();
+
+                    $sameRequest = $allocation
+                        && (int) $existing->amount === $amount
+                        && (int) $allocation->amount === $amount
+                        && (string) $existing->method === $method
+                        && (string) ($existing->reference ?? '') === (string) ($reference ?? '');
+
+                    if (! $sameRequest) {
+                        throw ValidationException::withMessages([
+                            'idempotency_key' => 'Kunci idempotensi sudah digunakan untuk pembayaran yang berbeda.',
+                        ]);
+                    }
+
+                    $existing->setAttribute('idempotent_replay', true);
+                    return $existing->load(['customer', 'allocations.invoice']);
+                }
+            }
+
             if (in_array($locked->status, ['void'], true)) {
                 throw ValidationException::withMessages(['amount' => 'Invoice void tidak dapat dibayar.']);
             }
@@ -45,7 +79,6 @@ class PaymentService
                 throw ValidationException::withMessages(['amount' => 'Pembayaran tidak boleh melebihi sisa tagihan.']);
             }
 
-            $tenantId = (string) $locked->tenant_id;
             $paidAtCarbon = $paidAt ? \Carbon\CarbonImmutable::parse($paidAt) : now()->toImmutable();
             $paymentNumber = $this->sequences->next(
                 $tenantId,
@@ -64,6 +97,7 @@ class PaymentService
                 'amount' => $amount,
                 'method' => $method,
                 'reference' => $reference,
+                'idempotency_key' => $idempotencyKey,
                 'paid_at' => $paidAtCarbon,
                 'status' => 'posted',
                 'notes' => $notes,
@@ -91,12 +125,23 @@ class PaymentService
             $locked->status = $this->billing->statusFor($locked);
             $locked->save();
 
+            // Register while this transaction is active. Laravel defers the callback until
+            // the outermost transaction commits, including proof-review workflows.
+            DB::afterCommit(function () use ($payment, $locked, $actorUserId): void {
+                $this->runPostCommitActions($payment, $locked->id, $actorUserId);
+            });
+
             return $payment->load(['customer', 'allocations.invoice']);
         }, 3);
 
+        return $payment;
+    }
+
+    private function runPostCommitActions(Payment $payment, int $invoiceId, ?int $actorUserId): void
+    {
         // A valid payment must remain posted even if a network-side automation action fails.
         // The scheduled automation runner will retry later.
-        $freshInvoice = Invoice::query()->with('service')->find($invoice->id);
+        $freshInvoice = Invoice::query()->with('service')->find($invoiceId);
         if ($freshInvoice?->service) {
             try {
                 $result = $this->automation->evaluateService(
@@ -120,8 +165,5 @@ class PaymentService
             report($e);
             $payment->setAttribute('commission_action', 'error');
         }
-
-        return $payment;
     }
 }
-

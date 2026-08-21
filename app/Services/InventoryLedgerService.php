@@ -5,6 +5,8 @@ use App\Models\CustomerService;
 use App\Models\InventoryBalance;
 use App\Models\InventoryItem;
 use App\Models\InventoryLocation;
+use App\Models\InventoryPurchaseOrder;
+use App\Models\InventoryPurchaseOrderItem;
 use App\Models\InventorySku;
 use App\Models\InventoryStockOpname;
 use App\Models\InventoryTransaction;
@@ -25,10 +27,17 @@ class InventoryLedgerService
 
     private function balance(int $locationId, int $skuId, bool $lock = true): InventoryBalance
     {
-        InventoryBalance::query()->firstOrCreate(
-            ['inventory_location_id'=>$locationId,'inventory_sku_id'=>$skuId],
-            ['quantity_on_hand'=>0,'quantity_reserved'=>0,'average_cost'=>0]
-        );
+        $now = now();
+        InventoryBalance::query()->insertOrIgnore([
+            'tenant_id' => $this->tenantId(),
+            'inventory_location_id' => $locationId,
+            'inventory_sku_id' => $skuId,
+            'quantity_on_hand' => 0,
+            'quantity_reserved' => 0,
+            'average_cost' => 0,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
         $q=InventoryBalance::query()->where('inventory_location_id',$locationId)->where('inventory_sku_id',$skuId);
         if($lock)$q->lockForUpdate();
         return $q->firstOrFail();
@@ -78,6 +87,66 @@ class InventoryLedgerService
             }
             return $tx->fresh(['lines']);
         });
+    }
+
+    public function receivePurchaseOrder(
+        InventoryPurchaseOrder $purchase,
+        int $purchaseItemId,
+        float $qty,
+        array $assets = [],
+        ?int $actorAccountId = null,
+        ?int $actorUserId = null,
+        ?string $notes = null,
+    ): InventoryTransaction {
+        if ($qty <= 0) {
+            throw ValidationException::withMessages(['quantity' => 'Jumlah penerimaan harus lebih dari 0.']);
+        }
+
+        return DB::transaction(function () use ($purchase, $purchaseItemId, $qty, $assets, $actorAccountId, $actorUserId, $notes) {
+            $lockedPurchase = InventoryPurchaseOrder::query()
+                ->whereKey($purchase->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($lockedPurchase->status === 'canceled') {
+                throw ValidationException::withMessages(['purchase' => 'Purchase order yang dibatalkan tidak dapat diterima.']);
+            }
+
+            $item = InventoryPurchaseOrderItem::query()
+                ->where('purchase_order_id', $lockedPurchase->id)
+                ->whereKey($purchaseItemId)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $remaining = (float) $item->quantity - (float) $item->received_quantity;
+            if ($qty > $remaining + 0.0001) {
+                throw ValidationException::withMessages(['quantity' => 'Penerimaan melebihi sisa purchase order.']);
+            }
+
+            $sku = $item->sku()->firstOrFail();
+            $transaction = $this->receive(
+                $lockedPurchase->destination()->firstOrFail(),
+                $sku,
+                $qty,
+                (float) $item->unit_cost,
+                $assets,
+                $lockedPurchase->supplier_id,
+                $lockedPurchase->id,
+                $actorAccountId,
+                $actorUserId,
+                $notes ?: 'Penerimaan '.$lockedPurchase->po_number,
+            );
+
+            $item->forceFill(['received_quantity' => (float) $item->received_quantity + $qty])->save();
+
+            $total = (float) $lockedPurchase->items()->sum('quantity');
+            $received = (float) $lockedPurchase->items()->sum('received_quantity');
+            $lockedPurchase->forceFill([
+                'status' => $received + 0.0001 >= $total ? 'received' : 'partial',
+            ])->save();
+
+            return $transaction;
+        }, 3);
     }
 
     public function transfer(InventoryLocation $from, InventoryLocation $to, InventorySku $sku, float $qty, array $assetIds=[], ?int $actorAccountId=null, ?int $actorUserId=null, ?string $notes=null, string $type='transfer'): InventoryTransaction

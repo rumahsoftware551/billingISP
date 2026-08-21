@@ -45,8 +45,11 @@ COMPOSE="docker compose --env-file .env.production -f docker-compose.prod.yml"
 $COMPOSE config --quiet
 $COMPOSE build app nginx radius backup
 $COMPOSE up -d postgres redis
+$COMPOSE run --rm --no-deps -e RUN_MIGRATIONS=false app jaringanku-cli php artisan migrate --force
 $COMPOSE up -d app radius queue scheduler nginx backup
-$COMPOSE exec -T app jaringanku-cli php artisan db:seed --force
+if [ "${BOOTSTRAP_PRODUCTION:-false}" = "true" ]; then
+  $COMPOSE exec -T app jaringanku-cli php artisan db:seed --force
+fi
 $COMPOSE exec -T app jaringanku-cli php artisan jaringanku:production-preflight
 $COMPOSE exec -T app jaringanku-cli php artisan jaringanku:phase12-preflight
 $COMPOSE exec -T app jaringanku-cli php artisan jaringanku:phase13-preflight

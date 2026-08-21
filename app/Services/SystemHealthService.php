@@ -41,7 +41,10 @@ class SystemHealthService
             return 'No failed jobs';
         }, false);
 
-        $coreReady = collect(['database', 'redis', 'storage'])->every(fn ($key) => ($checks[$key]['ok'] ?? false) === true);
+        // Billing automation, gateway notifications, webhook delivery, and reminders
+        // depend on both processes. A web process alone is not operationally ready.
+        $coreReady = collect(['database', 'redis', 'storage', 'queue', 'scheduler'])
+            ->every(fn ($key) => ($checks[$key]['ok'] ?? false) === true);
         $degraded = collect($checks)->contains(fn ($check) => ($check['ok'] ?? false) === false);
 
         return [
