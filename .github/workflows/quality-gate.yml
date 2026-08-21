@@ -52,18 +52,16 @@ jobs:
           coverage: none
       - name: Validate Composer manifest
         run: composer validate --strict
-      - name: Resolve PHP dependencies
-        run: composer update --prefer-dist --no-interaction --no-progress
+      - name: Install PHP dependencies from lockfile
+        run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Audit PHP dependencies
+        run: composer audit --locked --no-interaction
       - name: PHP syntax check
         run: find app bootstrap config database routes tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Run feature tests
-        run: php artisan test --colors=always
-      - name: Preserve generated PHP lockfile for review
-        uses: actions/upload-artifact@v4
-        with:
-          name: generated-composer-lock
-          path: composer.lock
-          if-no-files-found: error
+        run: |
+          test -n "$(find tests -type f -name '*Test.php' -print -quit)"
+          php artisan test --colors=always
 
   frontend:
     name: TypeScript and production frontend build
