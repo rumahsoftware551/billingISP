@@ -92,11 +92,11 @@ The Compose Nginx container uses Laravel's built-in `/up` endpoint for its conta
 
 ## Backup model
 
-The production backup service uses PostgreSQL `pg_dump -Fc` custom archive format and saves SHA-256 files alongside dumps. Retention is controlled with:
+The production backup service creates a paired PostgreSQL `pg_dump -Fc` archive and compressed `storage/app` archive for the same UTC timestamp. It writes per-file SHA-256 sidecars plus a combined manifest. Retention is controlled with:
 
 ```env
 BACKUP_RETENTION_DAYS=14
 BACKUP_INTERVAL_SECONDS=86400
 ```
 
-A backup is not a recovery plan until restore has been tested. Use a staging/local environment for routine restore drills.
+A backup is not a recovery plan until the paired database-and-storage restore has been tested. Use a staging/local environment for routine restore drills. `prod-restore.sh` intentionally refuses a database-only restore unless a matching `.storage.tar.gz` archive is present.

@@ -159,6 +159,7 @@ services:
       postgres: {condition: service_healthy}
     volumes:
       - backups:/backups
+      - storage:/storage:ro
     security_opt: ["no-new-privileges:true"]
     networks: [jaringanku]
 

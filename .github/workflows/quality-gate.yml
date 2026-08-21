@@ -58,6 +58,8 @@ jobs:
         run: composer audit --locked --no-interaction
       - name: PHP syntax check
         run: find app bootstrap config database routes tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Deployment shell syntax check
+        run: find docker scripts -type f -name '*.sh' -print0 | xargs -0 -r -n1 sh -n
       - name: Run feature tests
         run: |
           test -n "$(find tests -type f -name '*Test.php' -print -quit)"
